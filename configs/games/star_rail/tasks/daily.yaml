@@ -1,0 +1,45 @@
+# 星穹铁道 — 日常任务工作流（骨架）
+# 使用前请用 annotate 工具补齐 assets/ui 下模板图
+
+name: star_rail_daily
+description: 日常领取与扫荡示例流程（需自行补全模板）
+
+vars:
+  sweep_times: 1
+
+steps:
+  - id: preflight
+    do:
+      - assert_window: true
+      - log: "开始日常流程"
+
+  - id: wait_main
+    do:
+      - wait_for:
+          anchor: main_menu_marker
+          timeout_ms: 15000
+          optional: true
+      - log: "主界面或已就绪"
+
+  - id: open_daily_panel
+  # 示例：通过 OCR 找到「日常」相关文字区域并点击（需 ROI 与游戏 UI 对齐）
+    do:
+      - click_ocr:
+          anchor: daily_text
+          optional: true
+      - wait:
+          ms: 800
+
+  - id: claim_rewards
+    loop:
+      max: 5
+    do:
+      - click_template:
+          anchor: claim_button
+          optional: true
+      - wait:
+          ms: 600
+
+  - id: finish
+    do:
+      - log: "日常流程结束（示例骨架）"

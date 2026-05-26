@@ -1,0 +1,51 @@
+# 崩坏：星穹铁道 — 游戏配置
+# 窗口模式，分辨率约 2048（宽）；高度随显示器比例可能为 1152 或 1536，请按实际标定
+
+game_id: star_rail
+display_name: 崩坏：星穹铁道
+
+window:
+  # 窗口标题子串匹配（中英文客户端）
+  title_contains:
+    - 崩坏：星穹铁道
+    - 崩坏:星穹铁道
+    - Honkai Star Rail
+    - Star Rail
+
+resolution:
+  width: 2048
+  height: 1152
+  # 容差：实际客户区与配置相差在此范围内仍允许运行
+  tolerance: 32
+
+paths:
+  assets: assets
+  tasks: tasks
+
+anchors:
+  # 示例锚点：请用 ocr4game-annotate 截取真实 UI 后替换图片与 ROI
+  main_menu_marker:
+    type: template
+    image: ui/main_menu_marker.png
+    threshold: 0.85
+    roi: [0.0, 0.0, 1.0, 0.12]
+
+  daily_text:
+    type: ocr
+    expect:
+      - 日常
+      - 每日
+      - 实训
+    roi: [0.65, 0.05, 0.98, 0.22]
+    min_confidence: 0.5
+
+  claim_button:
+    type: template
+    image: ui/claim_button.png
+    threshold: 0.88
+    roi: [0.3, 0.5, 0.7, 0.95]
+
+recovery:
+  # 卡住时尝试按 Esc 关闭弹窗（可按游戏习惯调整）
+  escape_key: escape
+  max_recovery_attempts: 2
