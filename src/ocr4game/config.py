@@ -1,72 +1,105 @@
-"""配置加载与路径解析。"""
+"""配置模型与加载。"""
 
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field
 
+from ocr4game.resources import game_profile_path, global_config_path
 
-def repo_root() -> Path:
-    return Path(__file__).resolve().parents[2]
-
-
-def configs_dir() -> Path:
-    return repo_root() / "configs"
+RelativeRoi = Annotated[list[float], Field(min_length=4, max_length=4)]
 
 
-def game_config_dir(game_id: str) -> Path:
-    return configs_dir() / "games" / game_id
+class CaptureConfig(BaseModel):
+    backend: str = "mss"
+    fps_limit: int = 10
+
+
+class InputConfig(BaseModel):
+    click_jitter: int = 3
+    default_delay_ms: int = 80
+
+
+class WorkflowDefaultsConfig(BaseModel):
+    default_step_timeout_ms: int = 10000
+    default_max_retry: int = 3
+    max_run_minutes: int = 45
+
+
+class WindowConfig(BaseModel):
+    title_contains: list[str] = Field(default_factory=list)
+
+
+class ResolutionConfig(BaseModel):
+    width: int = 2048
+    height: int = 1152
+    tolerance: int = 32
+
+
+class PathsConfig(BaseModel):
+    assets: str = "assets"
+    tasks: str = "tasks"
+
+
+class RecoveryConfig(BaseModel):
+    escape_key: str = "escape"
+    max_recovery_attempts: int = 2
+
+
+class TemplateAnchorConfig(BaseModel):
+    type: Literal["template"] = "template"
+    image: str
+    threshold: float = 0.85
+    roi: RelativeRoi | None = None
+
+
+class OcrAnchorConfig(BaseModel):
+    type: Literal["ocr"] = "ocr"
+    expect: list[str] = Field(default_factory=list)
+    roi: RelativeRoi | None = None
+    min_confidence: float = 0.5
+
+
+AnchorConfig = TemplateAnchorConfig | OcrAnchorConfig
+
+
+class GlobalConfig(BaseModel):
+    log_level: str = "INFO"
+    runs_dir: str = "runs"
+    capture: CaptureConfig = Field(default_factory=CaptureConfig)
+    input: InputConfig = Field(default_factory=InputConfig)
+    workflow: WorkflowDefaultsConfig = Field(default_factory=WorkflowDefaultsConfig)
+
+
+class GameProfile(BaseModel):
+    game_id: str
+    display_name: str = ""
+    window: WindowConfig = Field(default_factory=WindowConfig)
+    resolution: ResolutionConfig = Field(default_factory=ResolutionConfig)
+    paths: PathsConfig = Field(default_factory=PathsConfig)
+    anchors: dict[str, AnchorConfig] = Field(default_factory=dict)
+    recovery: RecoveryConfig = Field(default_factory=RecoveryConfig)
+
+
+def load_global_config() -> GlobalConfig:
+    path = global_config_path()
+    if not path.exists():
+        return GlobalConfig()
+    return GlobalConfig.model_validate(load_yaml(path))
+
+
+
+def load_game_profile(game_id: str) -> GameProfile:
+    path = game_profile_path(game_id)
+    data = load_yaml(path)
+    data.setdefault("game_id", game_id)
+    return GameProfile.model_validate(data)
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as f:
         data = yaml.safe_load(f)
     return data if isinstance(data, dict) else {}
-
-
-class GlobalConfig(BaseModel):
-    log_level: str = "INFO"
-    runs_dir: str = "runs"
-    capture: dict[str, Any] = Field(default_factory=dict)
-    input: dict[str, Any] = Field(default_factory=dict)
-    workflow: dict[str, Any] = Field(default_factory=dict)
-
-    @classmethod
-    def load(cls) -> GlobalConfig:
-        path = configs_dir() / "global.yaml"
-        if not path.exists():
-            return cls()
-        return cls.model_validate(load_yaml(path))
-
-
-class GameProfile(BaseModel):
-    game_id: str
-    display_name: str = ""
-    window: dict[str, Any] = Field(default_factory=dict)
-    resolution: dict[str, int] = Field(default_factory=dict)
-    paths: dict[str, str] = Field(default_factory=dict)
-    anchors: dict[str, dict[str, Any]] = Field(default_factory=dict)
-    recovery: dict[str, Any] = Field(default_factory=dict)
-
-    @classmethod
-    def load(cls, game_id: str) -> GameProfile:
-        path = game_config_dir(game_id) / "profile.yaml"
-        data = load_yaml(path)
-        data.setdefault("game_id", game_id)
-        return cls.model_validate(data)
-
-    def assets_dir(self) -> Path:
-        rel = self.paths.get("assets", "assets")
-        return game_config_dir(self.game_id) / rel
-
-    def anchor_image_path(self, anchor_name: str) -> Path | None:
-        anchor = self.anchors.get(anchor_name)
-        if not anchor or anchor.get("type") != "template":
-            return None
-        image = anchor.get("image")
-        if not image:
-            return None
-        return self.assets_dir() / image

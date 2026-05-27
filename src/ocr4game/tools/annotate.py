@@ -9,10 +9,11 @@ from pathlib import Path
 import cv2
 import yaml
 
-from ocr4game.config import GameProfile, game_config_dir, load_yaml
+from ocr4game.config import GameProfile, load_game_profile, load_global_config, load_yaml
 from ocr4game.games.registry import get_plugin
+from ocr4game.resources import game_assets_dir, game_profile_path
+from ocr4game.runtime.binding import bind_runtime
 from ocr4game.workflow.context import RunContext
-from ocr4game.config import GlobalConfig
 
 # OpenCV 框选状态
 _drawing = False
@@ -65,8 +66,9 @@ def _update_profile_anchor(
         "threshold": threshold,
         "roi": roi,
     }
+    profile = GameProfile.model_validate(data)
     with profile_path.open("w", encoding="utf-8") as f:
-        yaml.dump(data, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
+        yaml.dump(profile.model_dump(mode="python"), f, allow_unicode=True, sort_keys=False, default_flow_style=False)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -76,11 +78,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--threshold", type=float, default=0.88)
     args = parser.parse_args(argv)
 
-    global_cfg = GlobalConfig.load()
-    profile = GameProfile.load(args.game)
+    global_cfg = load_global_config()
+    profile = load_game_profile(args.game)
     plugin = get_plugin(profile)
     ctx = RunContext(profile=profile, global_cfg=global_cfg)
-    if not plugin.preflight(ctx):
+    if not bind_runtime(ctx) or not plugin.preflight(ctx):
         print("未找到游戏窗口，请先窗口化启动游戏。", file=sys.stderr)
         return 1
 
@@ -114,7 +116,7 @@ def main(argv: list[str] | None = None) -> int:
     right, bottom = max(x0, x1), max(y0, y1)
     crop = _clone[top:bottom, left:right]
 
-    ui_dir = profile.assets_dir() / "ui"
+    ui_dir = game_assets_dir(profile) / "ui"
     ui_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{args.name}.png"
     out_path = ui_dir / filename
@@ -122,7 +124,7 @@ def main(argv: list[str] | None = None) -> int:
 
     roi = _relative_roi(x0, y0, x1, y1, w, h)
     image_rel = f"ui/{filename}"
-    profile_path = game_config_dir(args.game) / "profile.yaml"
+    profile_path = game_profile_path(args.game)
     _update_profile_anchor(profile_path, args.name, image_rel, roi, args.threshold)
 
     print(f"已保存模板: {out_path}")

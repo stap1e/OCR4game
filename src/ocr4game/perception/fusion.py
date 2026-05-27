@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
 import numpy as np
 
-from ocr4game.config import GameProfile
+from ocr4game.config import GameProfile, OcrAnchorConfig, TemplateAnchorConfig
 from ocr4game.perception.ocr import OcrEngine, OcrHit
 from ocr4game.perception.template import MatchResult, TemplateMatcher
+from ocr4game.resources import game_assets_dir
 
 
 @dataclass
@@ -32,15 +32,10 @@ class Perception:
         if not anchor:
             return PerceptionResult(False, "unknown", 0.0, (0, 0), f"未定义锚点: {anchor_name}")
 
-        kind = anchor.get("type", "template")
-        roi = anchor.get("roi")
-
-        if kind == "template":
-            image = anchor.get("image", "")
-            path = self._profile.assets_dir() / image
-            threshold = float(anchor.get("threshold", 0.85))
+        if isinstance(anchor, TemplateAnchorConfig):
+            path = game_assets_dir(self._profile) / anchor.image
             m: MatchResult = self._template.match(
-                frame, path, threshold=threshold, roi=roi
+                frame, path, threshold=anchor.threshold, roi=anchor.roi
             )
             return PerceptionResult(
                 m.found,
@@ -50,11 +45,12 @@ class Perception:
                 str(path.name),
             )
 
-        if kind == "ocr":
-            expect = anchor.get("expect", [])
-            min_conf = float(anchor.get("min_confidence", 0.5))
+        if isinstance(anchor, OcrAnchorConfig):
             hit: OcrHit | None = self._ocr.find_text(
-                frame, expect, roi=roi, min_confidence=min_conf
+                frame,
+                anchor.expect,
+                roi=anchor.roi,
+                min_confidence=anchor.min_confidence,
             )
             if hit:
                 return PerceptionResult(
@@ -62,7 +58,7 @@ class Perception:
                 )
             return PerceptionResult(False, "ocr", 0.0, (0, 0))
 
-        return PerceptionResult(False, "unknown", 0.0, (0, 0), f"未知类型: {kind}")
+        return PerceptionResult(False, "unknown", 0.0, (0, 0), f"未知类型: {anchor.type}")
 
     def template_visible(self, frame: np.ndarray, anchor_name: str) -> bool:
         return self.evaluate_anchor(frame, anchor_name).found

@@ -2,26 +2,31 @@
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
 from typing import Any
 
-from ocr4game.config import game_config_dir, load_yaml
+from ocr4game.config import load_yaml
+from ocr4game.games.base import GamePlugin
+from ocr4game.workflow.actions import ActionExecutor, ActionRegistry, build_default_registry
 from ocr4game.workflow.context import RunContext
-
-
-class StepFailed(Exception):
-    def __init__(self, step_id: str, message: str = "") -> None:
-        self.step_id = step_id
-        super().__init__(message or f"步骤失败: {step_id}")
+from ocr4game.workflow.errors import StepFailed
 
 
 class WorkflowEngine:
-    def __init__(self, ctx: RunContext) -> None:
+    def __init__(
+        self,
+        ctx: RunContext,
+        *,
+        plugin: GamePlugin | None = None,
+        registry: ActionRegistry | None = None,
+    ) -> None:
         self._ctx = ctx
-        wf = ctx.global_cfg.workflow
-        self._default_timeout = int(wf.get("default_step_timeout_ms", 10000))
-        self._default_retry = int(wf.get("default_max_retry", 3))
+        self._default_timeout = ctx.global_cfg.workflow.default_step_timeout_ms
+        self._default_retry = ctx.global_cfg.workflow.default_max_retry
+        self._registry = registry or build_default_registry(default_timeout_ms=self._default_timeout)
+        if plugin is not None:
+            plugin.register_actions(self._registry)
+        self._executor = ActionExecutor(ctx, self._registry)
 
     def run_task(self, task_path: Path) -> None:
         data = load_yaml(task_path)
@@ -35,20 +40,38 @@ class WorkflowEngine:
         actions = block.get("do") or []
         loop_cfg = block.get("loop")
         repeat = block.get("repeat")
+        retry = int(block.get("retry", self._default_retry))
 
         if loop_cfg is not None:
             max_iter = int(loop_cfg) if isinstance(loop_cfg, int) else int(loop_cfg.get("max", 10))
             for _ in range(max_iter):
-                if not self._run_actions(step_id, actions):
+                if not self._run_with_retry(step_id, actions, retry=retry):
                     break
             return
 
         if repeat is not None:
             for _ in range(int(repeat)):
-                self._run_actions(step_id, actions)
+                self._run_with_retry(step_id, actions, retry=retry)
             return
 
-        self._run_actions(step_id, actions, allow_fail=True)
+        self._run_with_retry(step_id, actions, retry=retry, allow_fail=True)
+
+    def _run_with_retry(
+        self,
+        step_id: str,
+        actions: list[dict[str, Any]],
+        *,
+        retry: int,
+        allow_fail: bool = False,
+    ) -> bool:
+        attempts = max(retry, 0) + 1
+        for attempt in range(attempts):
+            try:
+                return self._run_actions(step_id, actions, allow_fail=allow_fail)
+            except StepFailed:
+                if attempt + 1 >= attempts:
+                    raise
+        return True
 
     def _run_actions(
         self,
@@ -58,107 +81,8 @@ class WorkflowEngine:
         allow_fail: bool = False,
     ) -> bool:
         for action in actions:
-            if not self._execute_action(step_id, action):
+            if not self._executor.execute(step_id, action):
                 if allow_fail:
                     continue
                 return False
-        return True
-
-    def _execute_action(self, step_id: str, action: dict[str, Any]) -> bool:
-        if len(action) != 1:
-            self._ctx.log.warning("无效动作", action=action)
-            return True
-
-        name, params = next(iter(action.items()))
-        params = params if isinstance(params, dict) else {}
-        optional = bool(params.get("optional", False))
-
-        try:
-            if name == "log":
-                msg = params if isinstance(params, str) else params.get("msg", "")
-                self._ctx.log.info("workflow", step=step_id, msg=msg)
-                return True
-
-            if name == "assert_window":
-                if self._ctx.window is None:
-                    raise StepFailed(step_id, "游戏窗口未找到")
-                return True
-
-            if name == "wait":
-                ms = int(params.get("ms", 500))
-                assert self._ctx.input is not None
-                self._ctx.input.sleep_ms(ms)
-                return True
-
-            if name == "wait_for":
-                return self._wait_for_anchor(step_id, params)
-
-            if name == "click_template":
-                return self._click_anchor(step_id, params, kind="template")
-
-            if name == "click_ocr":
-                return self._click_anchor(step_id, params, kind="ocr")
-
-            self._ctx.log.warning("未知动作", name=name)
-            return True
-
-        except StepFailed:
-            if optional:
-                self._ctx.log.info("可选步骤跳过", step=step_id, action=name)
-                return True
-            frame = self._ctx.grab_frame()
-            path = self._ctx.save_failure_shot(step_id, frame)
-            self._ctx.log.error("步骤失败", step=step_id, screenshot=str(path))
-            raise
-        except Exception as exc:
-            if optional:
-                self._ctx.log.info("可选步骤异常", step=step_id, error=str(exc))
-                return True
-            raise StepFailed(step_id, str(exc)) from exc
-
-    def _wait_for_anchor(self, step_id: str, params: dict[str, Any]) -> bool:
-        anchor = params.get("anchor", "")
-        timeout_ms = int(params.get("timeout_ms", self._default_timeout))
-        optional = bool(params.get("optional", False))
-        deadline = time.time() + timeout_ms / 1000.0
-
-        while time.time() < deadline:
-            frame = self._ctx.grab_frame()
-            assert self._ctx.perception is not None
-            if self._ctx.perception.evaluate_anchor(frame, anchor).found:
-                return True
-            assert self._ctx.input is not None
-            self._ctx.input.sleep_ms(200)
-
-        if optional:
-            return True
-        raise StepFailed(step_id, f"等待锚点超时: {anchor}")
-
-    def _click_anchor(self, step_id: str, params: dict[str, Any], *, kind: str) -> bool:
-        anchor = params.get("anchor", "")
-        optional = bool(params.get("optional", False))
-        frame = self._ctx.grab_frame()
-        assert self._ctx.perception is not None
-        result = self._ctx.perception.evaluate_anchor(frame, anchor)
-
-        if not result.found:
-            if optional:
-                return True
-            self._ctx.save_failure_shot(step_id, frame)
-            raise StepFailed(step_id, f"未找到锚点: {anchor}")
-
-        if kind == "template" and result.kind != "template":
-            if optional:
-                return True
-            raise StepFailed(step_id, f"锚点 {anchor} 不是模板类型")
-
-        assert self._ctx.input is not None
-        self._ctx.input.click(result.center[0], result.center[1])
-        self._ctx.log.info(
-            "点击",
-            step=step_id,
-            anchor=anchor,
-            center=result.center,
-            confidence=result.confidence,
-        )
         return True

@@ -5,15 +5,19 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 import structlog
 
-from ocr4game.config import GlobalConfig, GameProfile, repo_root
-from ocr4game.platform.capture import ScreenCapture
-from ocr4game.platform.input_win import InputDriver
-from ocr4game.platform.window import GameWindow
-from ocr4game.perception.fusion import Perception
+from ocr4game.config import GlobalConfig, GameProfile
+from ocr4game.resources import runs_base_dir
+
+if TYPE_CHECKING:
+    from ocr4game.perception.fusion import Perception
+    from ocr4game.platform.capture import ScreenCapture
+    from ocr4game.platform.input_win import InputDriver
+    from ocr4game.platform.window import GameWindow
 
 
 @dataclass
@@ -31,7 +35,7 @@ class RunContext:
     def ensure_run_dir(self) -> Path:
         if self.run_dir is not None:
             return self.run_dir
-        base = repo_root() / self.global_cfg.runs_dir
+        base = runs_base_dir(self.global_cfg)
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.run_dir = base / f"{self.profile.game_id}_{stamp}"
         self.run_dir.mkdir(parents=True, exist_ok=True)
