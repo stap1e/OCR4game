@@ -1,0 +1,107 @@
+game_id: star_rail
+frame_size:
+- 512
+- 288
+production_resolution:
+- 2048
+- 1152
+cases:
+- id: main_menu_marker_hit
+  anchor: main_menu_marker
+  frame: frames/main_menu.png
+  template: templates/main_menu_marker.png
+  roi:
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.12
+  threshold: 0.85
+  expect_found: true
+- id: main_menu_marker_miss
+  anchor: main_menu_marker
+  frame: frames/no_main_menu.png
+  template: templates/main_menu_marker.png
+  roi:
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.12
+  threshold: 0.85
+  expect_found: false
+- id: claim_button_hit
+  anchor: claim_button
+  frame: frames/daily_panel.png
+  template: templates/claim_button.png
+  roi:
+  - 0.3
+  - 0.5
+  - 0.7
+  - 0.95
+  threshold: 0.88
+  expect_found: true
+- id: daily_panel_marker_hit
+  anchor: daily_panel_marker
+  frame: frames/daily_panel.png
+  template: templates/daily_panel_marker.png
+  roi:
+  - 0.0
+  - 0.0
+  - 1.0
+  - 0.15
+  threshold: 0.85
+  expect_found: true
+- id: claim_button_miss
+  anchor: claim_button
+  frame: frames/main_menu.png
+  template: templates/claim_button.png
+  roi:
+  - 0.3
+  - 0.5
+  - 0.7
+  - 0.95
+  threshold: 0.88
+  expect_found: false
+- id: guide_entrance_hit
+  anchor: guide_entrance
+  frame: frames/guide_screen.png
+  template: templates/guide_entrance.png
+  roi:
+  - 0.0
+  - 0.0
+  - 0.15
+  - 0.25
+  threshold: 0.85
+  expect_found: true
+- id: sweep_button_hit
+  anchor: sweep_button
+  frame: frames/sweep_dialog.png
+  template: templates/sweep_button.png
+  roi:
+  - 0.55
+  - 0.6
+  - 0.95
+  - 0.95
+  threshold: 0.88
+  expect_found: true
+- id: confirm_button_hit
+  anchor: confirm_button
+  frame: frames/sweep_dialog.png
+  template: templates/confirm_button.png
+  roi:
+  - 0.35
+  - 0.55
+  - 0.65
+  - 0.85
+  threshold: 0.88
+  expect_found: true
+- id: dialog_close_hit
+  anchor: dialog_close
+  frame: frames/reward_dialog.png
+  template: templates/dialog_close.png
+  roi:
+  - 0.72
+  - 0.08
+  - 0.98
+  - 0.32
+  threshold: 0.85
+  expect_found: true

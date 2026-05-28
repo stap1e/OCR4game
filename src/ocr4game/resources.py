@@ -21,6 +21,10 @@ def game_config_dir(game_id: str) -> Path:
     return configs_dir() / "games" / game_id
 
 
+def games_config_dir() -> Path:
+    return configs_dir() / "games"
+
+
 def global_config_path() -> Path:
     return configs_dir() / "global.yaml"
 

@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
-from ocr4game.config import GameProfile, load_game_profile, load_global_config
+from ocr4game.config import load_game_profile, load_global_config
 from ocr4game.workflow.actions import ActionRegistry
 from ocr4game.workflow.context import RunContext
 from ocr4game.workflow.engine import WorkflowEngine
@@ -195,3 +195,64 @@ steps:
     engine.run_task(task_path)
 
     assert calls["count"] == 3
+
+
+def test_task_vars_interpolate_repeat_and_wait(run_context: RunContext, tmp_path: Path) -> None:
+    task_path = tmp_path / "vars.yaml"
+    task_path.write_text(
+        """
+vars:
+  sweep_times: 2
+  panel_wait_ms: 900
+
+steps:
+  - id: sweep
+    repeat: "{sweep_times}"
+    do:
+      - wait:
+          ms: "{panel_wait_ms}"
+      - log: "第 {sweep_times} 轮"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    engine = WorkflowEngine(run_context)
+    engine.run_task(task_path)
+
+    assert run_context.input.sleep_calls == [900, 900]
+    assert any(
+        event == "workflow" and kwargs.get("msg") == "第 2 轮"
+        for _, event, kwargs in run_context.log.events
+    )
+
+
+def test_task_vars_interpolate_loop_max(run_context: RunContext, tmp_path: Path) -> None:
+    task_path = tmp_path / "loop_vars.yaml"
+    task_path.write_text(
+        """
+vars:
+  claim_loop_max: 3
+
+steps:
+  - id: claim
+    loop:
+      max: "{claim_loop_max}"
+    do:
+      - tick: {}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    registry = ActionRegistry()
+    engine = WorkflowEngine(run_context, registry=registry)
+    calls = {"count": 0}
+
+    def tick(_ctx, _step_id, _params):
+        calls["count"] += 1
+        return True
+
+    registry.register("tick", tick)
+    engine.run_task(task_path)
+
+    assert calls["count"] == 3
+

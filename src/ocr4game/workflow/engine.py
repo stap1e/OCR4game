@@ -10,6 +10,7 @@ from ocr4game.games.base import GamePlugin
 from ocr4game.workflow.actions import ActionExecutor, ActionRegistry, build_default_registry
 from ocr4game.workflow.context import RunContext
 from ocr4game.workflow.errors import StepFailed
+from ocr4game.workflow.vars import resolve_value
 
 
 class WorkflowEngine:
@@ -33,7 +34,10 @@ class WorkflowEngine:
         self._ctx.vars.update(data.get("vars") or {})
         steps = data.get("steps") or []
         for block in steps:
-            self._run_step_block(block)
+            self._run_step_block(self._resolve(block))
+
+    def _resolve(self, value: Any) -> Any:
+        return resolve_value(value, self._ctx.vars)
 
     def _run_step_block(self, block: dict[str, Any]) -> None:
         step_id = block.get("id", "anonymous")

@@ -1,45 +1,115 @@
-# 星穹铁道 — 日常任务工作流（骨架）
-# 使用前请用 annotate 工具补齐 assets/ui 下模板图
+# 星穹铁道 — 日常任务工作流
+# 模板图请用 ocr4game-annotate 截取；合成回归见 tests/fixtures/star_rail/
+#
+# vars 可在步骤中用 {var_name} 引用（整值保留类型，字符串内可部分替换）
 
 name: star_rail_daily
-description: 日常领取与扫荡示例流程（需自行补全模板）
+description: |
+  日常自动化骨架：主界面 → 开拓指南/活动 → 领取 → 材料本扫荡 → 收尾。
+  未就绪的步骤已标 optional: true，补全模板后可去掉 optional。
 
 vars:
   sweep_times: 1
+  claim_loop_max: 8
+  panel_wait_ms: 1200
 
 steps:
   - id: preflight
     do:
       - assert_window: true
-      - log: "开始日常流程"
+      - log: "=== 星穹铁道日常开始 ==="
 
-  - id: wait_main
+  - id: ensure_main_menu
+    retry: 1
     do:
       - wait_for:
           anchor: main_menu_marker
-          timeout_ms: 15000
+          timeout_ms: 20000
           optional: true
-      - log: "主界面或已就绪"
+      - log: "主界面已就绪（或跳过等待）"
+
+  - id: dismiss_startup_dialogs
+    do:
+      - click_template:
+          anchor: dialog_close
+          optional: true
+      - wait:
+          ms: 400
+      - click_template:
+          anchor: dialog_close
+          optional: true
+      - wait:
+          ms: 300
+
+  - id: open_guide_book
+    do:
+      - click_template:
+          anchor: guide_entrance
+          optional: true
+      - wait:
+          ms: "{panel_wait_ms}"
+      - log: "尝试打开开拓指南/活动入口"
 
   - id: open_daily_panel
-  # 示例：通过 OCR 找到「日常」相关文字区域并点击（需 ROI 与游戏 UI 对齐）
     do:
       - click_ocr:
           anchor: daily_text
           optional: true
       - wait:
           ms: 800
+      - wait_for:
+          anchor: daily_panel_marker
+          timeout_ms: 10000
+          optional: true
+      - log: "日常/活动面板"
 
-  - id: claim_rewards
+  - id: claim_daily_rewards
     loop:
-      max: 5
+      max: "{claim_loop_max}"
     do:
       - click_template:
           anchor: claim_button
           optional: true
       - wait:
+          ms: 500
+      - click_template:
+          anchor: confirm_button
+          optional: true
+      - wait:
+          ms: 400
+      - click_template:
+          anchor: dialog_close
+          optional: true
+      - wait:
+          ms: 350
+
+  - id: run_material_sweep
+    repeat: "{sweep_times}"
+    do:
+      - click_template:
+          anchor: sweep_button
+          optional: true
+      - wait:
           ms: 600
+      - click_template:
+          anchor: confirm_button
+          optional: true
+      - wait:
+          ms: 1500
+      - log: "扫荡 {sweep_times} 轮（需配置 sweep_button 模板）"
+
+  - id: return_to_main
+    do:
+      - click_template:
+          anchor: dialog_close
+          optional: true
+      - wait:
+          ms: 300
+      - wait_for:
+          anchor: main_menu_marker
+          timeout_ms: 8000
+          optional: true
 
   - id: finish
     do:
-      - log: "日常流程结束（示例骨架）"
+      - log: "=== 日常流程结束 ==="

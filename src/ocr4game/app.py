@@ -7,13 +7,9 @@ import sys
 
 import structlog
 
-from ocr4game.config import GameProfile, GlobalConfig, load_game_profile, load_global_config
-from ocr4game.games.registry import get_plugin
+from ocr4game.config import load_game_profile, load_global_config
+from ocr4game.games.registry import discover_configured_games, get_plugin, list_registered_games
 from ocr4game.resources import game_task_path
-from ocr4game.runtime.binding import bind_runtime
-from ocr4game.workflow.context import RunContext
-from ocr4game.workflow.engine import WorkflowEngine
-from ocr4game.workflow.errors import StepFailed
 
 
 def _configure_logging(level: str) -> None:
@@ -42,7 +38,27 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="仅检查窗口与配置，不执行工作流",
     )
+    parser.add_argument(
+        "--list-games",
+        action="store_true",
+        help="列出已注册与已配置的游戏 ID",
+    )
     args = parser.parse_args(argv)
+
+    if args.list_games:
+        registered = list_registered_games()
+        configured = discover_configured_games()
+        print("已注册插件:", ", ".join(registered) or "(无)")
+        print("已配置目录:", ", ".join(configured) or "(无)")
+        unregistered = sorted(set(configured) - set(registered))
+        if unregistered:
+            print("未注册插件（需在 games/registry.py 中注册）:", ", ".join(unregistered))
+        return 0
+
+    from ocr4game.runtime.binding import bind_runtime
+    from ocr4game.workflow.context import RunContext
+    from ocr4game.workflow.engine import WorkflowEngine
+    from ocr4game.workflow.errors import StepFailed
 
     global_cfg = load_global_config()
     _configure_logging(global_cfg.log_level)

@@ -24,11 +24,25 @@ paths:
 
 anchors:
   # 示例锚点：请用 ocr4game-annotate 截取真实 UI 后替换图片与 ROI
+  # 合成回归测试见 tests/fixtures/star_rail/manifest.yaml
+
   main_menu_marker:
     type: template
     image: ui/main_menu_marker.png
     threshold: 0.85
     roi: [0.0, 0.0, 1.0, 0.12]
+
+  guide_entrance:
+    type: template
+    image: ui/guide_entrance.png
+    threshold: 0.85
+    roi: [0.0, 0.0, 0.15, 0.25]
+
+  daily_panel_marker:
+    type: template
+    image: ui/daily_panel_marker.png
+    threshold: 0.85
+    roi: [0.0, 0.0, 1.0, 0.15]
 
   daily_text:
     type: ocr
@@ -36,6 +50,7 @@ anchors:
       - 日常
       - 每日
       - 实训
+      - 活跃度
     roi: [0.65, 0.05, 0.98, 0.22]
     min_confidence: 0.5
 
@@ -44,6 +59,24 @@ anchors:
     image: ui/claim_button.png
     threshold: 0.88
     roi: [0.3, 0.5, 0.7, 0.95]
+
+  confirm_button:
+    type: template
+    image: ui/confirm_button.png
+    threshold: 0.88
+    roi: [0.35, 0.55, 0.65, 0.85]
+
+  sweep_button:
+    type: template
+    image: ui/sweep_button.png
+    threshold: 0.88
+    roi: [0.55, 0.6, 0.95, 0.95]
+
+  dialog_close:
+    type: template
+    image: ui/dialog_close.png
+    threshold: 0.85
+    roi: [0.72, 0.08, 0.98, 0.32]
 
 recovery:
   # 卡住时尝试按 Esc 关闭弹窗（可按游戏习惯调整）
