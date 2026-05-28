@@ -31,6 +31,9 @@ class WorkflowDefaultsConfig(BaseModel):
 
 class WindowConfig(BaseModel):
     title_contains: list[str] = Field(default_factory=list)
+    title_exclude: list[str] = Field(default_factory=list)
+    class_exclude: list[str] = Field(default_factory=list)
+    process_names: list[str] = Field(default_factory=list)
 
 
 class ResolutionConfig(BaseModel):

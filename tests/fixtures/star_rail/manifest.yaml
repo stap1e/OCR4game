@@ -3,8 +3,8 @@ frame_size:
 - 512
 - 288
 production_resolution:
-- 2048
-- 1152
+- 1280
+- 720
 cases:
 - id: main_menu_marker_hit
   anchor: main_menu_marker

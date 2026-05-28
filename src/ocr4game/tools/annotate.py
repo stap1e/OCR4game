@@ -13,6 +13,7 @@ from ocr4game.config import GameProfile, load_game_profile, load_global_config, 
 from ocr4game.games.registry import get_plugin
 from ocr4game.resources import game_assets_dir, game_profile_path
 from ocr4game.runtime.binding import bind_runtime
+from ocr4game.platform.window import GameWindow
 from ocr4game.workflow.context import RunContext
 
 # OpenCV 框选状态
@@ -74,18 +75,66 @@ def _update_profile_anchor(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="框选 UI 并保存为模板")
     parser.add_argument("--game", default="star_rail")
-    parser.add_argument("--name", required=True, help="锚点名称，如 claim_button")
+    parser.add_argument("--name", help="锚点名称，如 claim_button")
     parser.add_argument("--threshold", type=float, default=0.88)
+    parser.add_argument(
+        "--list-windows",
+        action="store_true",
+        help="列出匹配到的候选窗口并退出（排查误绑）",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="与 --list-windows 联用，显示近匹配窗口与排除原因",
+    )
     args = parser.parse_args(argv)
+
+    if not args.list_windows and not args.name:
+        parser.error("the following arguments are required: --name（使用 --list-windows 时可省略）")
 
     global_cfg = load_global_config()
     profile = load_game_profile(args.game)
+    window_cfg = profile.window
+    resolution = profile.resolution
+
+    if args.list_windows:
+        rows = GameWindow.list_candidates(
+            window_cfg.title_contains,
+            title_exclude=window_cfg.title_exclude,
+            class_exclude=window_cfg.class_exclude,
+            process_names=window_cfg.process_names,
+            expected_size=(resolution.width, resolution.height),
+            size_tolerance=resolution.tolerance,
+            verbose=args.verbose,
+        )
+        if not rows:
+            print("未找到候选窗口。")
+            print("请确认：")
+            print("  1. 游戏已窗口化启动（不要最小化到任务栏）")
+            print("  2. 分辨率与 profile.yaml 中 resolution 一致")
+            print("  3. 运行诊断：ocr4game-annotate --game star_rail --list-windows --verbose")
+            print("  4. 若 verbose 里 process 不是 StarRail.exe，将其填入 profile.yaml → process_names")
+            return 1
+        for row in rows:
+            mark = " <-- 已选" if row.get("selected") else ""
+            w, h = row["client_size"]  # type: ignore[index]
+            note = row.get("note")
+            note_text = f" note={note!r}" if note else ""
+            mode = row.get("mode", "")
+            print(
+                f"[{mode}] score={row['score']:.0f} hwnd={row['hwnd']} "
+                f"size={w}x{h} process={row['process']} class={row['class']} "
+                f"title={row['title']!r}{note_text}{mark}"
+            )
+        return 0
+
     plugin = get_plugin(profile)
     ctx = RunContext(profile=profile, global_cfg=global_cfg)
     if not bind_runtime(ctx) or not plugin.preflight(ctx):
         print("未找到游戏窗口，请先窗口化启动游戏。", file=sys.stderr)
         return 1
 
+    print("已绑定游戏窗口，正在截取画面（请勿让终端遮挡游戏）…", flush=True)
     frame = ctx.grab_frame()
     h, w = frame.shape[:2]
     global _frame, _clone

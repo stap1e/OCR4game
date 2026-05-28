@@ -31,8 +31,9 @@ def test_global_config_parses_sample() -> None:
 def test_game_profile_parses_sample() -> None:
     profile = load_game_profile("star_rail")
     assert profile.game_id == "star_rail"
-    assert "Star Rail" in profile.window.title_contains
-    assert profile.resolution.width == 2048
+    assert "崩坏" in profile.window.title_contains[0]
+    assert profile.resolution.width == 1280
+    assert profile.resolution.height == 720
     assert profile.paths.assets == "assets"
     assert isinstance(profile.anchors["main_menu_marker"], TemplateAnchorConfig)
     assert isinstance(profile.anchors["daily_text"], OcrAnchorConfig)

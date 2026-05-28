@@ -4,7 +4,9 @@
 
 ## 1. 安装
 
-**环境**：Windows 10/11、Python 3.11+、游戏 **窗口化**（客户区宽度约 2048）。
+**环境**：Windows 10/11、Python 3.11+、游戏 **窗口化**（星穹铁道推荐客户区 **1280×720**，见 `profile.yaml`）。
+
+> **Python 3.13**：`rapidocr-onnxruntime` 在 3.13 上最高为 1.2.x（1.3+ 暂不支持）。本项目已放宽依赖，可直接安装；若需最新 OCR 运行时，建议使用 Python 3.11 或 3.12。
 
 ```powershell
 cd c:\Users\16025\PythonProjects\OCR4game
@@ -40,7 +42,45 @@ ocr4game --list-games
 ### 2.1 启动游戏
 
 - 窗口模式，不要用全屏独占
-- 客户区宽度约 **2048**（高度常见 1152 或 1536，与 `profile.yaml` 一致）
+- 客户区 **1280×720**（与游戏内「显示模式 → 分辨率」一致；若改分辨率需同步 `profile.yaml`）
+
+### 2.1.1 确认窗口与进程名（`profile.yaml`）
+
+配置里填的是 **可执行文件名**（如 `StarRail.exe`），**不是**任务管理器里的 PID（进程号每次启动都会变）。
+
+| 你在系统里看到的 | 是否写入 `profile.yaml` | 对应字段 |
+|------------------|-------------------------|----------|
+| 任务管理器 → 应用 → **Star Rail** | 否（这是显示名） | — |
+| 窗口标题栏 **崩坏：星穹铁道** | 是 | `window.title_contains` |
+| 属性 → 文件名 **StarRail.exe** | 是 | `window.process_names` |
+| 详细信息 → **PID**（如 12345） | 否 | — |
+
+**国服（miHoYo 启动器）查进程名：**
+
+1. `Ctrl + Shift + Esc` 打开任务管理器 → **应用** 页找到 **Star Rail**
+2. 右键 **Star Rail** → **属性**（或打开文件所在位置）
+3. 在「常规」页看 **文件名**：`StarRail.exe` → 填入 `process_names`
+4. 典型安装路径：`C:\Program Files\miHoYo Launcher\games\Star Rail Game\StarRail.exe`
+
+**用命令自动核对（游戏窗口化运行中）：**
+
+```powershell
+ocr4game-annotate --game star_rail --list-windows
+```
+
+期望输出含 `process=StarRail.exe`、`size=1280x720`、`title='崩坏：星穹铁道'` 且带 `<-- 已选`。
+
+**PowerShell 备选：**
+
+```powershell
+Get-Process | Where-Object { $_.ProcessName -eq 'StarRail' } |
+  Select-Object Id, ProcessName, Path, MainWindowTitle
+```
+
+- 用 **ProcessName** → 配置为 `StarRail.exe`
+- **Id** 仅用于排查，不要写入 YAML
+
+当前星穹铁道默认配置见 `configs/games/star_rail/profile.yaml` 的 `window` 块；若 `--list-windows` 无结果，检查游戏是否窗口化、分辨率是否与 `resolution` 一致。
 
 ### 2.2 离线校验（无需开游戏）
 
@@ -52,7 +92,7 @@ ocr4game --validate --game star_rail --task daily
 
 ### 2.3 准备 UI 模板
 
-**方式 A — 游戏内框选（推荐，2048 实机分辨率）**
+**方式 A — 游戏内框选（推荐，1280×720 实机分辨率）**
 
 ```powershell
 ocr4game-annotate --game star_rail --name main_menu_marker
@@ -95,10 +135,14 @@ ocr4game-threshold --game star_rail --anchor claim_button --apply
 ### 2.5 窗口预检
 
 ```powershell
+# 列出候选窗口（排查误绑，无需 --name）
+ocr4game-annotate --game star_rail --list-windows
+
+# 完整预检
 ocr4game --dry-run --game star_rail
 ```
 
-包含：离线校验 + 查找游戏窗口 + 分辨率提示。
+包含：离线校验 + 查找游戏窗口 + 分辨率提示。日志中应出现 `process=StarRail.exe`、`client_size=(1280, 720)`。
 
 ### 2.6 运行日常
 

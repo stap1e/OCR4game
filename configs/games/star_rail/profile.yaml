@@ -1,29 +1,41 @@
 # 崩坏：星穹铁道 — 游戏配置
-# 窗口模式，分辨率约 2048（宽）；高度随显示器比例可能为 1152 或 1536，请按实际标定
+# 窗口模式，客户区分辨率 1280×720（与游戏内「显示模式 → 分辨率」一致）
 
 game_id: star_rail
 display_name: 崩坏：星穹铁道
 
 window:
-  # 窗口标题子串匹配（中英文客户端）
+  # 窗口标题子串（任务管理器「应用」里显示 Star Rail，标题栏多为「崩坏：星穹铁道」）
   title_contains:
     - 崩坏：星穹铁道
     - 崩坏:星穹铁道
-    - Honkai Star Rail
     - Star Rail
+    - Honkai Star Rail
+  title_exclude:
+    - Cursor
+    - ocr4game
+    - Visual Studio
+    - PowerShell
+    - Windows Terminal
+    - Code
+  # 进程可执行文件名（不是 PID！）
+  # 国服：任务管理器 → 应用「Star Rail」→ 右键「属性」→ 文件名 StarRail.exe
+  # 典型路径：C:\Program Files\miHoYo Launcher\games\Star Rail Game\StarRail.exe
+  process_names:
+    - StarRail.exe
 
 resolution:
-  width: 2048
-  height: 1152
+  width: 1280
+  height: 720
   # 容差：实际客户区与配置相差在此范围内仍允许运行
-  tolerance: 32
+  tolerance: 16
 
 paths:
   assets: assets
   tasks: tasks
 
 anchors:
-  # 示例锚点：请用 ocr4game-annotate 截取真实 UI 后替换图片与 ROI
+  # 示例锚点：请用 ocr4game-annotate 在 1280×720 窗口下截取真实 UI
   # 合成回归测试见 tests/fixtures/star_rail/manifest.yaml
 
   main_menu_marker:

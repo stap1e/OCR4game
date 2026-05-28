@@ -34,7 +34,28 @@ configs/
 | `game_id` | 与 `games/<id>/` 目录名、插件 `game_id` 一致 |
 | `display_name` | 显示名（可选） |
 | `window.title_contains` | 窗口标题子串列表 |
-| `resolution.width/height/tolerance` | 期望客户区与容差 |
+| `window.title_exclude` | 排除误匹配的标题子串（如 IDE、终端） |
+| `window.process_names` | 仅匹配这些 **exe 文件名**（如 `StarRail.exe`；不是 PID） |
+
+### 星穹铁道（star_rail）窗口字段示例
+
+```yaml
+window:
+  title_contains:
+    - 崩坏：星穹铁道
+  process_names:
+    - StarRail.exe   # 属性 → 文件名，非任务管理器里的「Star Rail」显示名
+  title_exclude:
+    - Cursor
+    - PowerShell
+resolution:
+  width: 1280
+  height: 720
+```
+
+查 exe 名：任务管理器 → 应用 **Star Rail** → 右键 **属性** → **StarRail.exe**。详见 [USAGE.md §2.1.1](../docs/USAGE.md#211-确认窗口与进程名profileyaml)。
+
+| `resolution.width/height/tolerance` | 期望客户区与容差（也用于窗口优选） |
 | `paths.assets` / `paths.tasks` | 相对游戏目录的子路径 |
 | `anchors.<name>` | 模板或 OCR 锚点 |
 | `recovery.escape_key` | 失败时尝试按下的键 |
