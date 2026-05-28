@@ -6,6 +6,8 @@
 
 **环境**：Windows 10/11、Python 3.11+、游戏 **窗口化**（客户区宽度约 2048）。
 
+> **Python 3.13**：上游 `rapidocr-onnxruntime` 在 3.13 上最高为 1.2.x（1.3+ 暂不支持 3.13）。本项目已放宽依赖，可直接 `pip install`；若需最新 OCR 运行时，建议使用 Python 3.11 或 3.12。
+
 ```powershell
 cd c:\Users\16025\PythonProjects\OCR4game
 python -m venv .venv
