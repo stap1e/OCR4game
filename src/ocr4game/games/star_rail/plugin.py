@@ -12,6 +12,7 @@ log = structlog.get_logger()
 
 class StarRailPlugin(GamePlugin):
     game_id = "star_rail"
+    display_name = "崩坏：星穹铁道"
 
     def preflight(self, ctx: RunContext) -> bool:
         if ctx.window is None:

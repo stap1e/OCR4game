@@ -69,6 +69,7 @@ flowchart TB
 |------|------|
 | `resources.py` | 仓库根目录、配置路径、runs 目录等路径解析 |
 | `config.py` | Pydantic 配置模型与 YAML 加载 |
+| `validation.py` | 离线校验 profile、任务、锚点与模板资源 |
 | `runtime/binding.py` | 绑定窗口、截屏、输入、感知到 `RunContext` |
 | `platform/` | Win32 窗口查找、客户区截屏、DirectInput 点击 |
 | `perception/` | 模板匹配、OCR、锚点融合判定 |
@@ -88,7 +89,7 @@ flowchart TB
 ## 扩展点
 
 - **新动作**：在 `workflow/actions/` 注册 handler，或在 Plugin 的 `register_actions()` 中追加
-- **新游戏**：复制 `configs/games/_template/`，实现 `games/<id>/plugin.py` 并注册到 `registry.py`（见 [ADDING_A_GAME.md](ADDING_A_GAME.md)）
+- **新游戏**：复制 `configs/games/_template/`，实现 Plugin，在 `pyproject.toml` 注册 entry_points（见 [ADDING_A_GAME.md](ADDING_A_GAME.md)）
 - **新日常**：只改 `tasks/*.yaml` 与 `assets/ui/` 模板，通常无需改 Python
 
 ## 设计原则

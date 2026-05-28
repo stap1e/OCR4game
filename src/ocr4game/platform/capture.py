@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import numpy as np
-import mss
 import cv2
+import mss
+import numpy as np
 
 from ocr4game.platform.window import GameWindow
 

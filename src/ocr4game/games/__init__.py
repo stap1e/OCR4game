@@ -5,6 +5,8 @@ from ocr4game.games.registry import (
     get_plugin,
     get_plugin_spec,
     list_registered_games,
+    load_plugin_registry,
+    reload_plugin_registry,
 )
 
 __all__ = [
@@ -14,4 +16,6 @@ __all__ = [
     "get_plugin",
     "get_plugin_spec",
     "list_registered_games",
+    "load_plugin_registry",
+    "reload_plugin_registry",
 ]

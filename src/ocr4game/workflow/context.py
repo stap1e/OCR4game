@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 import structlog
 
-from ocr4game.config import GlobalConfig, GameProfile
+from ocr4game.config import GameProfile, GlobalConfig
 from ocr4game.resources import runs_base_dir
 
 if TYPE_CHECKING:

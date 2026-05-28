@@ -1,6 +1,12 @@
 import pytest
 
-from ocr4game.workflow.vars import UndefinedVarError, resolve_value
+from ocr4game.workflow.vars import (
+    InvalidVarAssignmentError,
+    UndefinedVarError,
+    coerce_var_value,
+    parse_var_assignment,
+    resolve_value,
+)
 
 
 def test_resolve_scalar_preserves_type() -> None:
@@ -32,3 +38,25 @@ def test_undefined_var_raises() -> None:
 
     with pytest.raises(UndefinedVarError, match="missing"):
         resolve_value("hello {missing}", {"other": 1})
+
+
+def test_coerce_var_value() -> None:
+    assert coerce_var_value("3") == 3
+    assert coerce_var_value("1.5") == 1.5
+    assert coerce_var_value("true") is True
+    assert coerce_var_value("false") is False
+    assert coerce_var_value("hello") == "hello"
+
+
+def test_parse_var_assignment() -> None:
+    assert parse_var_assignment("sweep_times=3") == ("sweep_times", 3)
+    assert parse_var_assignment(" panel_wait_ms = 900 ") == ("panel_wait_ms", 900)
+    assert parse_var_assignment("enabled=false") == ("enabled", False)
+
+
+def test_parse_var_assignment_invalid() -> None:
+    with pytest.raises(InvalidVarAssignmentError):
+        parse_var_assignment("noequals")
+
+    with pytest.raises(InvalidVarAssignmentError):
+        parse_var_assignment("123bad=1")

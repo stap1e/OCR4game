@@ -1,12 +1,10 @@
-# 星穹铁道 — 日常任务工作流
-# 模板图请用 ocr4game-annotate 截取；合成回归见 tests/fixtures/star_rail/
-#
-# vars 可在步骤中用 {var_name} 引用（整值保留类型，字符串内可部分替换）
+# 星穹铁道 — 日常任务工作流（含 when/if 分支）
+# 模板：assets/ui/；回归帧：tests/fixtures/star_rail/frames/
 
 name: star_rail_daily
 description: |
-  日常自动化骨架：主界面 → 开拓指南/活动 → 领取 → 材料本扫荡 → 收尾。
-  未就绪的步骤已标 optional: true，补全模板后可去掉 optional。
+  日常自动化：主界面 → 关弹窗 → 开拓指南 → 日常面板 → 领取 → 扫荡 → 回主界面。
+  步骤级 when 按当前画面分支；do 内 if 处理可选 UI。
 
 vars:
   sweep_times: 1
@@ -20,37 +18,51 @@ steps:
       - log: "=== 星穹铁道日常开始 ==="
 
   - id: ensure_main_menu
+    when:
+      anchor_missing: main_menu_marker
     retry: 1
     do:
       - wait_for:
           anchor: main_menu_marker
           timeout_ms: 20000
           optional: true
-      - log: "主界面已就绪（或跳过等待）"
+      - log: "等待主界面"
 
   - id: dismiss_startup_dialogs
+    when:
+      anchor_visible: dialog_close
     do:
       - click_template:
           anchor: dialog_close
           optional: true
       - wait:
           ms: 400
-      - click_template:
-          anchor: dialog_close
-          optional: true
-      - wait:
-          ms: 300
+      - if:
+          when:
+            anchor_visible: dialog_close
+          do:
+            - click_template:
+                anchor: dialog_close
+                optional: true
+            - wait:
+                ms: 300
 
   - id: open_guide_book
+    when:
+      all:
+        - anchor_missing: daily_panel_marker
+        - anchor_visible: guide_entrance
     do:
       - click_template:
           anchor: guide_entrance
           optional: true
       - wait:
           ms: "{panel_wait_ms}"
-      - log: "尝试打开开拓指南/活动入口"
+      - log: "经开拓指南入口"
 
   - id: open_daily_panel
+    when:
+      anchor_missing: daily_panel_marker
     do:
       - click_ocr:
           anchor: daily_text
@@ -61,17 +73,23 @@ steps:
           anchor: daily_panel_marker
           timeout_ms: 10000
           optional: true
-      - log: "日常/活动面板"
+      - log: "打开日常面板"
 
   - id: claim_daily_rewards
+    when:
+      anchor_visible: claim_button
     loop:
       max: "{claim_loop_max}"
     do:
-      - click_template:
-          anchor: claim_button
-          optional: true
-      - wait:
-          ms: 500
+      - if:
+          when:
+            anchor_visible: claim_button
+          do:
+            - click_template:
+                anchor: claim_button
+                optional: true
+            - wait:
+                ms: 500
       - click_template:
           anchor: confirm_button
           optional: true
@@ -84,6 +102,11 @@ steps:
           ms: 350
 
   - id: run_material_sweep
+    when:
+      all:
+        - var_gt:
+            sweep_times: 0
+        - anchor_visible: sweep_button
     repeat: "{sweep_times}"
     do:
       - click_template:
@@ -96,9 +119,11 @@ steps:
           optional: true
       - wait:
           ms: 1500
-      - log: "扫荡 {sweep_times} 轮（需配置 sweep_button 模板）"
+      - log: "扫荡 {sweep_times} 轮"
 
   - id: return_to_main
+    when:
+      anchor_missing: main_menu_marker
     do:
       - click_template:
           anchor: dialog_close

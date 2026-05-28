@@ -21,11 +21,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "ruff>=0.8"]
 
 [project.scripts]
 ocr4game = "ocr4game.app:main"
 ocr4game-annotate = "ocr4game.tools.annotate:main"
+ocr4game-threshold = "ocr4game.tools.threshold_tune:main"
+ocr4game-import = "ocr4game.tools.import_screenshots:main"
+
+[project.entry-points."ocr4game.plugins"]
+star_rail = "ocr4game.games.star_rail.plugin:StarRailPlugin"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ocr4game"]
@@ -43,3 +48,4 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+ignore = ["E501"]

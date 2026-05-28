@@ -256,3 +256,101 @@ steps:
 
     assert calls["count"] == 3
 
+
+def test_var_overrides_beat_task_yaml(run_context: RunContext, tmp_path: Path) -> None:
+    task_path = tmp_path / "override.yaml"
+    task_path.write_text(
+        """
+vars:
+  sweep_times: 1
+  claim_loop_max: 8
+
+steps:
+  - id: sweep
+    repeat: "{sweep_times}"
+    do:
+      - wait:
+          ms: "{claim_loop_max}"
+""".strip(),
+        encoding="utf-8",
+    )
+
+    engine = WorkflowEngine(run_context)
+    engine.run_task(task_path, var_overrides={"sweep_times": 2, "claim_loop_max": 500})
+
+    assert run_context.input.sleep_calls == [500, 500]
+
+
+def test_step_when_skips_block(run_context: RunContext, tmp_path: Path) -> None:
+    task_path = tmp_path / "when_skip.yaml"
+    task_path.write_text(
+        """
+steps:
+  - id: only_if_visible
+    when:
+      anchor_visible: claim_button
+    do:
+      - stop_here: {}
+  - id: always
+    do:
+      - tick: {}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    from types import SimpleNamespace
+
+    run_context.perception = SimpleNamespace(
+        evaluate_anchor=lambda _f, name: SimpleNamespace(
+            found=name == "claim_button",
+            kind="template",
+            confidence=0.9,
+        )
+    )
+    run_context.capture = SimpleNamespace(grab=lambda: None)
+
+    registry = ActionRegistry()
+    engine = WorkflowEngine(run_context, registry=registry)
+    calls: list[str] = []
+
+    def stop_here(_ctx, _step_id, _params):
+        calls.append("stop")
+        return True
+
+    def tick(_ctx, _step_id, _params):
+        calls.append("tick")
+        return True
+
+    registry.register("stop_here", stop_here)
+    registry.register("tick", tick)
+    engine.run_task(task_path)
+
+    assert calls == ["stop", "tick"]
+
+
+def test_action_if_branch(run_context: RunContext, tmp_path: Path) -> None:
+    task_path = tmp_path / "if_action.yaml"
+    task_path.write_text(
+        """
+steps:
+  - id: branch
+    do:
+      - if:
+          when:
+            var_eq:
+              go: true
+          do:
+            - mark: {}
+""".strip(),
+        encoding="utf-8",
+    )
+
+    run_context.vars["go"] = True
+    registry = ActionRegistry()
+    engine = WorkflowEngine(run_context, registry=registry)
+    calls: list[str] = []
+
+    registry.register("mark", lambda *_a: calls.append("mark") or True)
+    engine.run_task(task_path)
+    assert calls == ["mark"]
+

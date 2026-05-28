@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+
+_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(_ROOT / "src"))
 
 import cv2
 import numpy as np
@@ -221,6 +225,13 @@ def main() -> None:
         yaml.dump(manifest, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
 
     print(f"Wrote fixtures under {FIXTURES}")
+
+    from ocr4game.config import load_game_profile
+    from ocr4game.tools.asset_sync import sync_templates_to_assets
+
+    profile = load_game_profile("star_rail")
+    copied = sync_templates_to_assets(profile, source_dir=TEMPLATES)
+    print(f"Synced {len(copied)} templates -> assets/ui/")
 
 
 if __name__ == "__main__":

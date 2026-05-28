@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 class GamePlugin(ABC):
     game_id: str
+    display_name: str = ""
 
     def __init__(self, profile: GameProfile) -> None:
         self.profile = profile

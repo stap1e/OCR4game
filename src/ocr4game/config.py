@@ -84,6 +84,26 @@ class GameProfile(BaseModel):
     recovery: RecoveryConfig = Field(default_factory=RecoveryConfig)
 
 
+class StepBlock(BaseModel):
+    id: str
+    do: list[dict[str, Any]] = Field(min_length=1)
+    when: dict[str, Any] | None = None
+    loop: dict[str, Any] | int | None = None
+    repeat: int | str | None = None
+    retry: int | None = None
+
+
+class TaskConfig(BaseModel):
+    name: str = ""
+    description: str = ""
+    vars: dict[str, Any] = Field(default_factory=dict)
+    steps: list[StepBlock] = Field(min_length=1)
+
+
+def load_task_config(path: Path) -> TaskConfig:
+    return TaskConfig.model_validate(load_yaml(path))
+
+
 def load_global_config() -> GlobalConfig:
     path = global_config_path()
     if not path.exists():
@@ -115,10 +135,13 @@ __all__ = [
     "RecoveryConfig",
     "RelativeRoi",
     "ResolutionConfig",
+    "TaskConfig",
+    "StepBlock",
     "TemplateAnchorConfig",
     "WindowConfig",
     "WorkflowDefaultsConfig",
     "load_game_profile",
     "load_global_config",
+    "load_task_config",
     "load_yaml",
 ]

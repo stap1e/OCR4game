@@ -1,19 +1,50 @@
 # 星穹铁道 UI 资源
 
-将截图模板放在 `ui/` 目录下，文件名与 `profile.yaml` 中 `anchors.*.image` 一致。
+`assets/ui/` 存放模板 PNG，与 `profile.yaml` 中 `anchors.*.image` 对应。
 
-推荐流程：
+**完整说明**：[docs/USAGE.md](../../../../docs/USAGE.md) §2.3
 
-1. 窗口化启动游戏，分辨率宽度约 2048
-2. 运行 `ocr4game-annotate --game star_rail`
-3. 框选 UI 元素，自动保存 PNG 并更新 `profile.yaml`
+## 快速命令
 
-占位文件（需替换为真实截图，或用 tests/fixtures/star_rail/templates/ 作参考）：
+```powershell
+# 1. 窗口化启动游戏
+ocr4game-annotate --game star_rail --name claim_button
 
-- `main_menu_marker.png` — 主界面左上角特征
-- `guide_entrance.png` — 开拓指南/活动入口
+# 2. 标定 threshold
+ocr4game-threshold --game star_rail --anchor claim_button --apply
+
+# 3. 或批量导入已有截图目录
+ocr4game-import --game star_rail --from-dir D:\screenshots\star_rail
+```
+
+导入目录结构：
+
+```text
+star_rail/
+  ui/
+    main_menu_marker.png
+    claim_button.png
+    ...
+  frames/              # 可选，同步到 tests/fixtures/star_rail/frames/
+    daily_panel.png
+```
+
+## 开发用合成模板
+
+无真实截图时，可从 fixture 同步占位图：
+
+```powershell
+python tests/fixtures/generate_star_rail.py
+```
+
+会自动写入 `tests/fixtures/star_rail/` 并同步到本目录 `ui/`。
+
+## 锚点列表
+
+- `main_menu_marker.png` — 主界面特征
+- `guide_entrance.png` — 开拓指南入口
 - `daily_panel_marker.png` — 日常面板标题栏
-- `claim_button.png` — 「领取」类按钮
-- `confirm_button.png` — 确认/完成
-- `sweep_button.png` — 扫荡/再次挑战
-- `dialog_close.png` — 弹窗关闭
+- `claim_button.png` — 领取按钮
+- `confirm_button.png` — 确认
+- `sweep_button.png` — 扫荡
+- `dialog_close.png` — 关闭弹窗

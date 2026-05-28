@@ -55,3 +55,13 @@ class TemplateMatcher:
         center = (ox + x + tw // 2, oy + y + th // 2)
         top_left = (ox + x, oy + y)
         return MatchResult(found, confidence, center, top_left)
+
+    def confidence(
+        self,
+        frame: np.ndarray,
+        template_path: Path,
+        *,
+        roi: list[float] | None = None,
+    ) -> MatchResult:
+        """返回匹配结果，不因 threshold 过滤（threshold=0）。"""
+        return self.match(frame, template_path, threshold=0.0, roi=roi)

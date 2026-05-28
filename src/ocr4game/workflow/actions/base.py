@@ -40,16 +40,14 @@ class ActionExecutor:
 
     def execute(self, step_id: str, action: dict[str, Any]) -> bool:
         if len(action) != 1:
-            self._ctx.log.warning("无效动作", action=action)
-            return True
+            raise StepFailed(step_id, f"无效动作（需为单键 dict）: {action!r}")
 
         name, raw_params = next(iter(action.items()))
         params = raw_params if isinstance(raw_params, dict) else raw_params
         optional = bool(params.get("optional", False)) if isinstance(params, dict) else False
         handler = self._registry.get(name)
         if handler is None:
-            self._ctx.log.warning("未知动作", name=name)
-            return True
+            raise StepFailed(step_id, f"未知动作: {name}")
 
         try:
             return handler(self._ctx, step_id, params)
