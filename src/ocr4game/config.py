@@ -57,6 +57,8 @@ class TemplateAnchorConfig(BaseModel):
     image: str
     threshold: float = 0.85
     roi: RelativeRoi | None = None
+    scales: list[float] = Field(default_factory=lambda: [1.0])
+    match_mode: Literal["color", "gray", "edges"] = "gray"
 
 
 class OcrAnchorConfig(BaseModel):
@@ -85,6 +87,7 @@ class GameProfile(BaseModel):
     paths: PathsConfig = Field(default_factory=PathsConfig)
     anchors: dict[str, AnchorConfig] = Field(default_factory=dict)
     recovery: RecoveryConfig = Field(default_factory=RecoveryConfig)
+    extensions: dict[str, Any] = Field(default_factory=dict)
 
 
 class StepBlock(BaseModel):
@@ -101,6 +104,7 @@ class TaskConfig(BaseModel):
     description: str = ""
     vars: dict[str, Any] = Field(default_factory=dict)
     steps: list[StepBlock] = Field(min_length=1)
+    extensions: dict[str, Any] = Field(default_factory=dict)
 
 
 def load_task_config(path: Path) -> TaskConfig:

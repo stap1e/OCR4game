@@ -18,6 +18,7 @@ from ocr4game.games.base import GamePlugin
 from ocr4game.resources import game_assets_dir
 from ocr4game.workflow.actions.base import build_default_registry
 from ocr4game.workflow.conditions import validate_condition_syntax
+from ocr4game.workflow.semantics import parse_action, parse_step_runtime
 from ocr4game.workflow.vars import UndefinedVarError, merge_var_overrides, resolve_value
 
 
@@ -79,13 +80,18 @@ def validate_task_config(
             )
             continue
 
-        actions = resolved.get("do") or []
         when = resolved.get("when")
         if when is not None:
             for message in validate_condition_syntax(when, profile=profile, path=f"{step_path}.when"):
                 issues.append(ValidationIssue("error", message, step_path))
 
-        for index, action in enumerate(actions):
+        try:
+            runtime = parse_step_runtime(resolved, default_retry=0)
+        except (AttributeError, TypeError, ValueError) as exc:
+            issues.append(ValidationIssue("error", f"步骤运行参数无效: {exc}", step_path))
+            continue
+
+        for index, action in enumerate(runtime.actions):
             action_path = f"{step_path}.do[{index}]"
             issues.extend(_validate_action(profile, action, action_path, registry))
 
@@ -94,13 +100,14 @@ def validate_task_config(
 
 def _validate_action(profile, action: dict, action_path: str, registry) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
-    if not isinstance(action, dict) or len(action) != 1:
-        issues.append(
-            ValidationIssue("error", f"动作必须是单键 dict: {action!r}", action_path)
-        )
+    try:
+        parsed = parse_action(action)
+    except ValueError as exc:
+        issues.append(ValidationIssue("error", str(exc), action_path))
         return issues
 
-    name, params = next(iter(action.items()))
+    name = parsed.name
+    params = parsed.params
     if name == "if":
         if not isinstance(params, dict):
             issues.append(ValidationIssue("error", "if 分支必须是 dict", action_path))
@@ -155,6 +162,11 @@ def validate_task_file(
         plugin.register_actions(registry)
 
     issues.extend(validate_game_profile(profile, strict_assets=strict_assets))
+    if plugin is not None:
+        issues.extend(
+            ValidationIssue("warning", message, "profile.extensions")
+            for message in plugin.validate_profile()
+        )
     issues.extend(
         validate_task_config(
             profile,
@@ -163,6 +175,11 @@ def validate_task_file(
             merged_vars=merged_vars,
         )
     )
+    if plugin is not None:
+        issues.extend(
+            ValidationIssue("warning", message, "task.extensions")
+            for message in plugin.validate_task(task)
+        )
     return issues
 
 

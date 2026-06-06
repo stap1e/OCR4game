@@ -42,18 +42,24 @@ anchors:
     type: template
     image: ui/main_menu_marker.png
     threshold: 0.85
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
     roi: [0.0, 0.0, 1.0, 0.12]
 
   guide_entrance:
     type: template
     image: ui/guide_entrance.png
     threshold: 0.85
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
     roi: [0.0, 0.0, 0.15, 0.25]
 
   daily_panel_marker:
     type: template
     image: ui/daily_panel_marker.png
     threshold: 0.85
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
     roi: [0.0, 0.0, 1.0, 0.15]
 
   daily_text:
@@ -70,24 +76,32 @@ anchors:
     type: template
     image: ui/claim_button.png
     threshold: 0.88
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
     roi: [0.3, 0.5, 0.7, 0.95]
 
   confirm_button:
     type: template
     image: ui/confirm_button.png
     threshold: 0.88
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
     roi: [0.35, 0.55, 0.65, 0.85]
 
   sweep_button:
     type: template
     image: ui/sweep_button.png
     threshold: 0.88
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
     roi: [0.55, 0.6, 0.95, 0.95]
 
   dialog_close:
     type: template
     image: ui/dialog_close.png
     threshold: 0.85
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
     roi: [0.72, 0.08, 0.98, 0.32]
 
 recovery:

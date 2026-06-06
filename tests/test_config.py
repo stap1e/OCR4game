@@ -54,3 +54,23 @@ def test_game_task_path_uses_profile_paths_tasks() -> None:
     profile = GameProfile(game_id="star_rail", paths=PathsConfig(tasks="custom_tasks"))
 
     assert game_task_path(profile, "daily") == repo_root() / "configs/games/star_rail/custom_tasks/daily.yaml"
+
+
+def test_profile_and_task_extensions_parse() -> None:
+    profile = GameProfile.model_validate(
+        {
+            "game_id": "demo",
+            "extensions": {"plugin.demo": {"region": "cn"}},
+        }
+    )
+    assert profile.extensions["plugin.demo"]["region"] == "cn"
+
+    from ocr4game.config import TaskConfig
+
+    task = TaskConfig.model_validate(
+        {
+            "extensions": {"plugin.demo": {"mode": "daily"}},
+            "steps": [{"id": "noop", "do": [{"wait": {"ms": 1}}]}],
+        }
+    )
+    assert task.extensions["plugin.demo"]["mode"] == "daily"

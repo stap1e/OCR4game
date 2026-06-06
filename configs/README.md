@@ -10,7 +10,7 @@ configs/
     star_rail/
       profile.yaml         # 窗口、分辨率、锚点
       tasks/*.yaml         # 工作流
-      assets/ui/           # 模板 PNG
+      assets/             # 模板图片，通常在 ui/ 下，也可按锚点 image 使用子目录
 ```
 
 ## global.yaml
@@ -59,6 +59,7 @@ resolution:
 | `paths.assets` / `paths.tasks` | 相对游戏目录的子路径 |
 | `anchors.<name>` | 模板或 OCR 锚点 |
 | `recovery.escape_key` | 失败时尝试按下的键 |
+| `extensions` | 插件或游戏私有扩展配置，避免把自定义字段散落到核心 schema |
 
 ### 锚点类型
 
@@ -69,8 +70,13 @@ claim_button:
   type: template
   image: ui/claim_button.png
   threshold: 0.88
+  scales: [0.95, 1.0, 1.05]
+  match_mode: gray
   roi: [0.3, 0.5, 0.7, 0.95]   # [x0,y0,x1,y1] 相对比例 0~1
 ```
+
+- `scales`：可选，多尺度模板搜索；默认 `[1.0]`
+- `match_mode`：可选，`gray` / `color` / `edges`；默认 `gray`
 
 **ocr** — ROI 内文字识别：
 

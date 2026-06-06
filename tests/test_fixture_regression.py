@@ -6,10 +6,12 @@ from pathlib import Path
 from typing import Any
 
 import cv2
+import numpy as np
 import pytest
 
 from ocr4game.config import GameProfile, TemplateAnchorConfig
 from ocr4game.perception.fusion import Perception
+from ocr4game.perception.template import TemplateMatcher
 from tests.conftest import STAR_RAIL_FIXTURES, load_star_rail_manifest
 
 
@@ -30,6 +32,8 @@ def _profile_for_case(case: dict[str, Any]) -> GameProfile:
                 image=image_name,
                 threshold=float(case.get("threshold", 0.85)),
                 roi=case.get("roi"),
+                scales=case.get("scales", [1.0]),
+                match_mode=str(case.get("match_mode", "gray")),
             ),
         },
     )
@@ -67,6 +71,31 @@ def test_template_anchor_regression(case: dict[str, Any], monkeypatch: pytest.Mo
         assert result.confidence >= threshold
     else:
         assert result.confidence < threshold
+
+def test_template_matcher_handles_scaled_templates() -> None:
+    template_path = STAR_RAIL_FIXTURES / "templates" / "claim_button.png"
+    template = cv2.imread(str(template_path))
+    assert template is not None
+
+    scaled = cv2.resize(template, (0, 0), fx=1.05, fy=1.05, interpolation=cv2.INTER_CUBIC)
+    frame = np.full((140, 220, 3), (28, 32, 40), dtype=np.uint8)
+    y, x = 58, 74
+    h, w = scaled.shape[:2]
+    frame[y : y + h, x : x + w] = scaled
+
+    matcher = TemplateMatcher()
+    default_result = matcher.match(frame, template_path, threshold=0.95)
+    scaled_result = matcher.match(
+        frame,
+        template_path,
+        threshold=0.95,
+        scales=[0.95, 1.0, 1.05],
+    )
+
+    assert default_result.found is False
+    assert scaled_result.found is True
+    assert scaled_result.confidence > default_result.confidence
+    assert scaled_result.center == (x + w // 2, y + h // 2)
 
 
 def test_manifest_covers_production_template_anchors() -> None:

@@ -9,7 +9,7 @@
 | `ocr4game` | 运行 / 校验 / 预检任务 |
 | `ocr4game-annotate` | 框选 UI，写入 `assets/ui/` 与 `profile.yaml` |
 | `ocr4game-threshold` | 标定 template 锚点 threshold |
-| `ocr4game-import` | 批量导入截图到 assets 与 fixtures |
+| `ocr4game-import` | 批量导入模板图片和 frames 到 assets 与 fixtures |
 
 ---
 
@@ -23,7 +23,7 @@
 | `--task NAME` | 任务名 → `tasks/<name>.yaml` |
 | `--var KEY=VALUE` | 覆盖任务 vars，可多次 |
 | `--validate` | 仅离线校验（无需游戏） |
-| `--dry-run` | 离线校验 + 窗口预检，不执行 |
+| `--dry-run` | 离线校验 + 窗口预检，不执行；不指定 `--task` 时使用 `daily` |
 | `--strict` | 缺模板等资源也视为失败 |
 | `--list-games` | 列出已注册 / 已配置游戏 |
 | `--log-level LEVEL` | `DEBUG` / `INFO` / `WARNING` / `ERROR` |
@@ -95,7 +95,7 @@ ocr4game-threshold --game star_rail --all --frame screenshot.png
 
 ## `ocr4game-import`
 
-从目录批量导入 PNG。
+从目录批量导入模板图片和 frames。
 
 | 参数 | 说明 |
 |------|------|
@@ -103,16 +103,19 @@ ocr4game-threshold --game star_rail --all --frame screenshot.png
 | `--from-dir PATH` | 源目录（必填） |
 | `--no-fixtures` | 不同步到 `tests/fixtures/` |
 
-目录结构：
+目录结构示例：
 
 ```text
 captures/star_rail/
   ui/
-    claim_button.png      # 文件名 = profile 中 image 的文件名
-    main_menu_marker.png
-  frames/                 # 可选 → tests/fixtures/.../frames/
+    ui/claim_button.png              # 路径可与 profile 中 anchors.*.image 一致
+    ui/buttons/confirm_button.png    # 支持子目录，避免同名模板冲突
+  frames/                            # 可选 → tests/fixtures/.../frames/
     daily_panel.png
+    nested/debug_frame.jpg           # 支持 .png/.jpg/.jpeg/.webp
 ```
+
+也支持扁平目录：若源目录没有 `ui/` 和 `frames/`，会按模板文件名匹配 `anchors.*.image`。
 
 ```powershell
 ocr4game-import --game star_rail --from-dir D:\captures\star_rail

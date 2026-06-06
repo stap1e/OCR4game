@@ -7,6 +7,7 @@ from typing import Any
 
 from ocr4game.workflow.context import RunContext
 from ocr4game.workflow.errors import StepFailed
+from ocr4game.workflow.semantics import parse_action
 
 ActionHandler = Callable[[RunContext, str, Any], bool]
 
@@ -39,21 +40,22 @@ class ActionExecutor:
         self._registry = registry
 
     def execute(self, step_id: str, action: dict[str, Any]) -> bool:
-        if len(action) != 1:
-            raise StepFailed(step_id, f"无效动作（需为单键 dict）: {action!r}")
+        try:
+            parsed = parse_action(action)
+        except ValueError as exc:
+            raise StepFailed(step_id, str(exc)) from exc
 
-        name, raw_params = next(iter(action.items()))
-        params = raw_params if isinstance(raw_params, dict) else raw_params
+        params = parsed.params
         optional = bool(params.get("optional", False)) if isinstance(params, dict) else False
-        handler = self._registry.get(name)
+        handler = self._registry.get(parsed.name)
         if handler is None:
-            raise StepFailed(step_id, f"未知动作: {name}")
+            raise StepFailed(step_id, f"未知动作: {parsed.name}")
 
         try:
             return handler(self._ctx, step_id, params)
         except StepFailed:
             if optional:
-                self._ctx.log.info("可选步骤跳过", step=step_id, action=name)
+                self._ctx.log.info("可选步骤跳过", step=step_id, action=parsed.name)
                 return True
             frame = self._ctx.grab_frame()
             path = self._ctx.save_failure_shot(step_id, frame)

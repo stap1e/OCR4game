@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from ocr4game.config import GameProfile
+from ocr4game.config import GameProfile, TaskConfig
 from ocr4game.workflow.context import RunContext
 
 if TYPE_CHECKING:
@@ -29,6 +29,12 @@ class GamePlugin(ABC):
 
     def register_actions(self, registry: ActionRegistry) -> None:
         return None
+
+    def validate_profile(self) -> list[str]:
+        return []
+
+    def validate_task(self, task: TaskConfig) -> list[str]:
+        return []
 
     def on_step_failure(self, ctx: RunContext, step_id: str, frame: np.ndarray) -> None:
         key = self.profile.recovery.escape_key

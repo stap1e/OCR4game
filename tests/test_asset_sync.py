@@ -1,6 +1,3 @@
-import shutil
-from pathlib import Path
-
 from ocr4game.tools.asset_sync import import_screenshots, sync_templates_to_assets
 
 
@@ -30,19 +27,21 @@ def test_sync_templates_to_assets(tmp_path, monkeypatch) -> None:
     assert (assets / "btn.png").is_file()
 
 
-def test_import_screenshots_flat_dir(tmp_path, monkeypatch) -> None:
+def test_import_screenshots_preserves_nested_paths_and_frame_extensions(tmp_path, monkeypatch) -> None:
     from ocr4game.config import GameProfile, PathsConfig, TemplateAnchorConfig
 
     profile = GameProfile(
         game_id="test_game",
         paths=PathsConfig(assets="assets"),
         anchors={
-            "btn": TemplateAnchorConfig(image="ui/btn.png", threshold=0.85),
+            "btn": TemplateAnchorConfig(image="ui/buttons/btn.png", threshold=0.85),
         },
     )
     src = tmp_path / "shots"
-    src.mkdir()
-    (src / "btn.png").write_bytes(b"png")
+    (src / "ui" / "ui" / "buttons").mkdir(parents=True)
+    (src / "ui" / "ui" / "buttons" / "btn.png").write_bytes(b"png")
+    (src / "frames" / "nested").mkdir(parents=True)
+    (src / "frames" / "nested" / "screen.jpg").write_bytes(b"jpg")
 
     monkeypatch.setattr(
         "ocr4game.tools.asset_sync.game_assets_dir",
@@ -58,6 +57,6 @@ def test_import_screenshots_flat_dir(tmp_path, monkeypatch) -> None:
     )
 
     assets, fixtures, frames = import_screenshots(profile, src)
-    assert len(assets) == 1
-    assert len(fixtures) == 1
-    assert not frames
+    assert assets == [tmp_path / "assets" / "ui" / "buttons" / "btn.png"]
+    assert fixtures == [tmp_path / "fixtures" / "templates" / "ui" / "buttons" / "btn.png"]
+    assert frames == [tmp_path / "fixtures" / "frames" / "nested" / "screen.jpg"]

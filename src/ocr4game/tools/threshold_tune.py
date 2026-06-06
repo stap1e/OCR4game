@@ -130,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
                 frame,
                 margin=args.margin,
             )
-        except (KeyError, TypeError) as exc:
+        except (KeyError, TypeError, FileNotFoundError) as exc:
             print(f"跳过 {anchor_name}: {exc}", file=sys.stderr)
             exit_code = 1
             continue

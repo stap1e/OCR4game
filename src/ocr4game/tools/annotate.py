@@ -42,6 +42,10 @@ def _on_mouse(event, x, y, _flags, _param) -> None:
 def _relative_roi(
     x0: int, y0: int, x1: int, y1: int, w: int, h: int
 ) -> list[float]:
+    x0 = max(0, min(x0, w))
+    x1 = max(0, min(x1, w))
+    y0 = max(0, min(y0, h))
+    y1 = max(0, min(y1, h))
     left, top = min(x0, x1), min(y0, y1)
     right, bottom = max(x0, x1), max(y0, y1)
     return [
@@ -163,13 +167,19 @@ def main(argv: list[str] | None = None) -> int:
 
     left, top = min(x0, x1), min(y0, y1)
     right, bottom = max(x0, x1), max(y0, y1)
+    left = max(0, min(left, w))
+    right = max(0, min(right, w))
+    top = max(0, min(top, h))
+    bottom = max(0, min(bottom, h))
     crop = _clone[top:bottom, left:right]
 
     ui_dir = game_assets_dir(profile) / "ui"
     ui_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{args.name}.png"
     out_path = ui_dir / filename
-    cv2.imwrite(str(out_path), crop)
+    if not cv2.imwrite(str(out_path), crop):
+        print(f"保存模板失败: {out_path}", file=sys.stderr)
+        return 1
 
     roi = _relative_roi(x0, y0, x1, y1, w, h)
     image_rel = f"ui/{filename}"

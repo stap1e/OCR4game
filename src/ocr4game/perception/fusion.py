@@ -35,7 +35,12 @@ class Perception:
         if isinstance(anchor, TemplateAnchorConfig):
             path = game_assets_dir(self._profile) / anchor.image
             m: MatchResult = self._template.match(
-                frame, path, threshold=anchor.threshold, roi=anchor.roi
+                frame,
+                path,
+                threshold=anchor.threshold,
+                roi=anchor.roi,
+                scales=anchor.scales,
+                match_mode=anchor.match_mode,
             )
             return PerceptionResult(
                 m.found,

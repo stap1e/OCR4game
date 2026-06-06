@@ -4,15 +4,23 @@
 
 ## 1. 安装
 
-**环境**：Windows 10/11、Python 3.11+、游戏 **窗口化**（星穹铁道推荐客户区 **1280×720**，见 `profile.yaml`）。
+**环境**：Windows 10/11、Python 3.11+（推荐 3.11 或 3.12）、游戏 **窗口化**（星穹铁道推荐客户区 **1280×720**，见 `profile.yaml`）。
 
-> **Python 3.13**：`rapidocr-onnxruntime` 在 3.13 上最高为 1.2.x（1.3+ 暂不支持）。本项目已放宽依赖，可直接安装；若需最新 OCR 运行时，建议使用 Python 3.11 或 3.12。
+> `rapidocr-onnxruntime` 在不同 Python 版本上的 wheel 支持可能不同。如果 OCR 依赖安装失败，优先尝试 Python 3.11/3.12，并先执行 `python -m pip install --upgrade pip`。
 
 ```powershell
 cd c:\Users\16025\PythonProjects\OCR4game
 python -m venv .venv
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass  # 如 PowerShell 拦截激活脚本，可先执行这一行
 .\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
 pip install -e ".[dev]"
+```
+
+只安装运行依赖时可用：
+
+```powershell
+pip install -e .
 ```
 
 安装后可用命令：
@@ -29,6 +37,12 @@ pip install -e ".[dev]"
 ```powershell
 ocr4game --version
 ocr4game --list-games
+```
+
+如果命令不可用，确认虚拟环境已激活，或用模块方式运行：
+
+```powershell
+python -m ocr4game.app --list-games
 ```
 
 ---
@@ -108,7 +122,19 @@ ocr4game-annotate --game star_rail --name claim_button
 ocr4game-import --game star_rail --from-dir D:\captures\star_rail
 ```
 
-目录需含 `ui/<锚点名>.png`，文件名与 `profile.yaml` 中 `anchors.*.image` 一致（见 [assets/README.md](../configs/games/star_rail/assets/README.md)）。
+目录可使用 `ui/` 和 `frames/` 子目录；UI 模板会按 `profile.yaml` 里 `anchors.*.image` 的相对路径匹配，frames 支持 `.png`、`.jpg`、`.jpeg`、`.webp`：
+
+```text
+D:\captures\star_rail\
+  ui\
+    ui\claim_button.png
+    ui\buttons\confirm_button.png
+  frames\
+    daily_panel.png
+    nested\debug_frame.jpg
+```
+
+默认会同步到 `tests/fixtures/`；不需要同步时加 `--no-fixtures`。
 
 **方式 C — 开发占位图（仅测试/CI，非实机）**
 
@@ -179,7 +205,7 @@ ocr4game --validate --game star_rail --task daily
 | 场景 | 做法 |
 |------|------|
 | 某步总失败 | 该动作加 `optional: true`，先跑通后续 |
-| 模板偶发找不到 | `ocr4game-threshold … --apply` 或缩小 ROI |
+| 模板偶发找不到 | `ocr4game-threshold … --apply`、缩小 ROI，或在锚点中配置 `scales` / `match_mode` |
 | 看失败画面 | 查看 `runs/star_rail_<时间戳>/fail_<step_id>.png` |
 | 详细日志 | `ocr4game --log-level DEBUG …` |
 | 步骤被跳过 | 检查步骤 `when` 条件是否不满足 |
@@ -198,6 +224,24 @@ ocr4game --validate --game star_rail --task daily
 | `dialog_close` | 关弹窗 |
 
 定义见 `configs/games/star_rail/profile.yaml`。
+
+### 3.4 模板锚点匹配参数
+
+`profile.yaml` 中 template 锚点支持轻量多尺度和预处理模式：
+
+```yaml
+claim_button:
+  type: template
+  image: ui/claim_button.png
+  threshold: 0.88
+  scales: [0.95, 1.0, 1.05]
+  match_mode: gray
+  roi: [0.3, 0.5, 0.7, 0.95]
+```
+
+- `scales`：按多个缩放比例搜索模板，适合窗口缩放或 UI 尺寸轻微变化。
+- `match_mode`：`gray`（默认，抗亮度变化）、`color`（保留颜色）、`edges`（更关注轮廓）。
+- `roi`：尽量框小，可减少误匹配并提升速度。
 
 ---
 

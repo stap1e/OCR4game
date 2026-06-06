@@ -140,7 +140,7 @@ steps:
 
 
 
-def test_repeat_ignores_false_return(run_context: RunContext, tmp_path: Path) -> None:
+def test_repeat_breaks_on_false_return(run_context: RunContext, tmp_path: Path) -> None:
     task_path = tmp_path / "repeat.yaml"
     task_path.write_text(
         """
@@ -164,7 +164,7 @@ steps:
     registry.register("stop_here", stop_here)
     engine.run_task(task_path)
 
-    assert calls["count"] == 3
+    assert calls["count"] == 1
 
 
 def test_retry_retries_step_until_success(run_context: RunContext, tmp_path: Path) -> None:

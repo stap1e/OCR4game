@@ -12,6 +12,7 @@ from ocr4game.workflow.actions import ActionExecutor, ActionRegistry, build_defa
 from ocr4game.workflow.context import RunContext
 from ocr4game.workflow.conditions import evaluate_condition
 from ocr4game.workflow.errors import RunTimeout, StepFailed
+from ocr4game.workflow.semantics import parse_step_runtime
 from ocr4game.workflow.vars import resolve_value
 
 
@@ -66,27 +67,23 @@ class WorkflowEngine:
             self._ctx.log.info("步骤跳过", step=step_id, reason="when=false")
             return
 
-        actions = block.get("do") or []
-        loop_cfg = block.get("loop")
-        repeat = block.get("repeat")
-        retry_raw = block.get("retry")
-        retry = int(retry_raw if retry_raw is not None else self._default_retry)
+        runtime = parse_step_runtime(block, default_retry=self._default_retry)
 
-        if loop_cfg is not None:
-            max_iter = int(loop_cfg) if isinstance(loop_cfg, int) else int(loop_cfg.get("max", 10))
-            for _ in range(max_iter):
+        if runtime.loop_max is not None:
+            for _ in range(runtime.loop_max):
                 self._check_run_timeout()
-                if not self._run_with_retry(step_id, actions, retry=retry):
+                if not self._run_with_retry(step_id, runtime.actions, retry=runtime.retry):
                     break
             return
 
-        if repeat is not None:
-            for _ in range(int(repeat)):
+        if runtime.repeat is not None:
+            for _ in range(runtime.repeat):
                 self._check_run_timeout()
-                self._run_with_retry(step_id, actions, retry=retry)
+                if not self._run_with_retry(step_id, runtime.actions, retry=runtime.retry):
+                    break
             return
 
-        self._run_with_retry(step_id, actions, retry=retry, allow_fail=True)
+        self._run_with_retry(step_id, runtime.actions, retry=runtime.retry, allow_fail=True)
 
     def _run_with_retry(
         self,

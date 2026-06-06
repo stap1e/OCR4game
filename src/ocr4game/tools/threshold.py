@@ -50,8 +50,17 @@ def evaluate_template_anchor(
         raise TypeError(f"锚点 {anchor_name} 不是 template 类型")
 
     template_path = game_assets_dir(profile) / anchor.image
+    if not template_path.is_file():
+        raise FileNotFoundError(f"模板不存在: {template_path}")
+
     matcher = TemplateMatcher()
-    result = matcher.confidence(frame, template_path, roi=anchor.roi)
+    result = matcher.confidence(
+        frame,
+        template_path,
+        roi=anchor.roi,
+        scales=anchor.scales,
+        match_mode=anchor.match_mode,
+    )
     suggested = suggest_threshold(result.confidence, margin=margin)
 
     return ThresholdReport(
