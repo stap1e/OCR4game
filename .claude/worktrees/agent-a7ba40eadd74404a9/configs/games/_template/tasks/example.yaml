@@ -1,0 +1,22 @@
+# 示例任务 — 复制后按需修改
+
+name: my_game_example
+description: 最小可运行工作流骨架
+
+steps:
+  - id: preflight
+    do:
+      - assert_window: true
+      - log: "示例任务开始"
+
+  - id: click_example
+    do:
+      - click_template:
+          anchor: example_button
+          optional: true
+      - wait:
+          ms: 500
+
+  - id: finish
+    do:
+      - log: "示例任务结束"

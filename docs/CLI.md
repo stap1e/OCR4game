@@ -71,7 +71,7 @@ ocr4game --log-level DEBUG --game star_rail --task daily
 ocr4game-annotate --game star_rail --name claim_button
 ```
 
-操作：`Enter` 确认选区，`Esc` 取消。需游戏 **窗口化** 且在前台。
+操作：`Enter` 确认有效选区，`R` 重新抓取当前游戏画面，`Esc` 取消。需游戏 **窗口化** 且在前台；选区过小时会留在窗口内等待重新框选。
 
 ---
 

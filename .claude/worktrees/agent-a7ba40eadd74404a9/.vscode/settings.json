@@ -1,0 +1,8 @@
+{
+  "python.defaultInterpreterPath": "C:/Users/16025/PythonProjects/OCR4game/.venv/Scripts/python.exe",
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": [
+    "tests"
+  ]
+}

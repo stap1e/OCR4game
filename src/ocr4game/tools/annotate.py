@@ -16,6 +16,8 @@ from ocr4game.resources import game_assets_dir, game_profile_path
 from ocr4game.runtime.binding import bind_runtime
 from ocr4game.workflow.context import RunContext
 
+MIN_SELECTION_SIZE = 4
+
 # OpenCV 框选状态
 _drawing = False
 _start = (0, 0)
@@ -24,12 +26,46 @@ _frame = None
 _clone = None
 
 
+def _reset_selection(frame) -> None:
+    global _drawing, _start, _end, _frame, _clone
+    _drawing = False
+    _start = (0, 0)
+    _end = (0, 0)
+    _clone = frame.copy()
+    _frame = frame.copy()
+
+
+def _selection_bounds(
+    x0: int, y0: int, x1: int, y1: int, w: int, h: int
+) -> tuple[int, int, int, int]:
+    left, right = sorted((x0, x1))
+    top, bottom = sorted((y0, y1))
+    left = max(0, min(left, w))
+    right = max(0, min(right, w))
+    top = max(0, min(top, h))
+    bottom = max(0, min(bottom, h))
+    return left, top, right, bottom
+
+
+def _has_valid_selection(
+    x0: int,
+    y0: int,
+    x1: int,
+    y1: int,
+    *,
+    min_size: int = MIN_SELECTION_SIZE,
+) -> bool:
+    return abs(x1 - x0) >= min_size and abs(y1 - y0) >= min_size
+
+
 def _on_mouse(event, x, y, _flags, _param) -> None:
     global _drawing, _start, _end, _frame, _clone
     if event == cv2.EVENT_LBUTTONDOWN:
         _drawing = True
         _start = (x, y)
         _end = (x, y)
+        if _clone is not None:
+            _frame = _clone.copy()
     elif event == cv2.EVENT_MOUSEMOVE and _drawing:
         _end = (x, y)
         _frame = _clone.copy()
@@ -37,6 +73,9 @@ def _on_mouse(event, x, y, _flags, _param) -> None:
     elif event == cv2.EVENT_LBUTTONUP:
         _drawing = False
         _end = (x, y)
+        if _clone is not None:
+            _frame = _clone.copy()
+            cv2.rectangle(_frame, _start, _end, (0, 255, 0), 2)
 
 
 def _relative_roi(
@@ -141,13 +180,12 @@ def main(argv: list[str] | None = None) -> int:
     print("已绑定游戏窗口，正在截取画面（请勿让终端遮挡游戏）…", flush=True)
     frame = ctx.grab_frame()
     h, w = frame.shape[:2]
-    global _frame, _clone
-    _clone = frame.copy()
-    _frame = frame.copy()
+    _reset_selection(frame)
 
-    win = "ocr4game-annotate — 拖拽框选，Enter 确认，Esc 取消"
+    win = "ocr4game-annotate — 拖拽框选，R 重抓帧，Enter 确认，Esc 取消"
     cv2.namedWindow(win, cv2.WINDOW_NORMAL)
     cv2.setMouseCallback(win, _on_mouse)
+    print("拖拽框选 UI；按 R 重新抓帧，Enter 保存，Esc 取消。", flush=True)
 
     while True:
         cv2.imshow(win, _frame)
@@ -155,22 +193,28 @@ def main(argv: list[str] | None = None) -> int:
         if key == 27:
             cv2.destroyAllWindows()
             return 0
+        if key in (ord("r"), ord("R")):
+            try:
+                frame = ctx.grab_frame()
+            except Exception as exc:  # pragma: no cover - defensive for live capture failures
+                print(f"重新抓帧失败: {exc}", file=sys.stderr)
+                continue
+            h, w = frame.shape[:2]
+            _reset_selection(frame)
+            print("已重新抓帧，请重新框选后按 Enter 保存。", flush=True)
+            continue
         if key in (13, 10):
+            x0, y0 = _start
+            x1, y1 = _end
+            if not _has_valid_selection(x0, y0, x1, y1):
+                print("选区过小，请重新框选，或按 R 重抓当前帧。", file=sys.stderr)
+                continue
             break
 
     cv2.destroyAllWindows()
     x0, y0 = _start
     x1, y1 = _end
-    if abs(x1 - x0) < 4 or abs(y1 - y0) < 4:
-        print("选区过小", file=sys.stderr)
-        return 1
-
-    left, top = min(x0, x1), min(y0, y1)
-    right, bottom = max(x0, x1), max(y0, y1)
-    left = max(0, min(left, w))
-    right = max(0, min(right, w))
-    top = max(0, min(top, h))
-    bottom = max(0, min(bottom, h))
+    left, top, right, bottom = _selection_bounds(x0, y0, x1, y1, w, h)
     crop = _clone[top:bottom, left:right]
 
     ui_dir = game_assets_dir(profile) / "ui"

@@ -1,0 +1,18 @@
+# 全局运行配置
+log_level: INFO
+runs_dir: runs
+
+capture:
+  # mss 按显示器截屏；窗口模式由 GamePlugin 裁剪客户区
+  backend: mss
+  fps_limit: 10
+
+input:
+  # 点击前随机偏移像素（降低完全固定坐标）
+  click_jitter: 3
+  default_delay_ms: 80
+
+workflow:
+  default_step_timeout_ms: 10000
+  default_max_retry: 3
+  max_run_minutes: 45

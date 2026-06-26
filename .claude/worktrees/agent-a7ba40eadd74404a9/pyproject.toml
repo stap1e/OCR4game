@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ocr4game"
+version = "0.1.0"
+description = "游戏视觉自动化：模板匹配 + OCR + 任务工作流（崩坏：星穹铁道）"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "opencv-python>=4.9",
+    "pyyaml>=6.0",
+    "pydantic>=2.6",
+    "mss>=9.0",
+    "rapidocr-onnxruntime>=1.2.3",
+    "pydirectinput>=1.0.4",
+    "pywin32>=306",
+    "structlog>=24.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.8"]
+
+[project.scripts]
+ocr4game = "ocr4game.app:main"
+ocr4game-annotate = "ocr4game.tools.annotate:main"
+ocr4game-threshold = "ocr4game.tools.threshold_tune:main"
+ocr4game-anchor-eval = "ocr4game.tools.anchor_eval:main"
+ocr4game-lint = "ocr4game.tools.lint:main"
+ocr4game-import = "ocr4game.tools.import_screenshots:main"
+ocr4game-report = "ocr4game.tools.report:main"
+ocr4game-replay = "ocr4game.tools.replay:main"
+ocr4game-recognize = "ocr4game.tools.recognize:main"
+
+[project.entry-points."ocr4game.plugins"]
+star_rail = "ocr4game.games.star_rail.plugin:StarRailPlugin"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ocr4game"]
+
+[tool.hatch.build.targets.wheel.sources]
+"src/ocr4game" = "ocr4game"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]

@@ -123,7 +123,7 @@ ocr4game-annotate --game star_rail --name claim_button
 ocr4game-annotate --game star_rail --name confirm_button
 ```
 
-操作方式：弹出窗口后拖拽框选 UI，按 `Enter` 保存，按 `Esc` 取消。工具会自动：
+操作方式：弹出窗口后拖拽框选 UI，按 `Enter` 保存，按 `R` 重新抓取当前游戏画面，按 `Esc` 取消。工具会自动：
 
 - 保存模板到 `configs/games/star_rail/assets/ui/`
 - 更新 `configs/games/star_rail/profile.yaml` 中对应锚点的 `roi`

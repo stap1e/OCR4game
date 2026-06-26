@@ -1,0 +1,142 @@
+# 崩坏：星穹铁道 — 游戏配置
+# 窗口模式，客户区分辨率 1280×720（与游戏内「显示模式 → 分辨率」一致）
+
+game_id: star_rail
+display_name: 崩坏：星穹铁道
+
+window:
+  # 窗口标题子串（任务管理器「应用」里显示 Star Rail，标题栏多为「崩坏：星穹铁道」）
+  title_contains:
+    - 崩坏：星穹铁道
+    - 崩坏:星穹铁道
+    - Star Rail
+    - Honkai Star Rail
+  title_exclude:
+    - Cursor
+    - ocr4game
+    - Visual Studio
+    - PowerShell
+    - Windows Terminal
+    - Code
+  # 进程可执行文件名（不是 PID！）
+  # 国服：任务管理器 → 应用「Star Rail」→ 右键「属性」→ 文件名 StarRail.exe
+  # 典型路径：C:\Program Files\miHoYo Launcher\games\Star Rail Game\StarRail.exe
+  process_names:
+    - StarRail.exe
+
+resolution:
+  width: 1280
+  height: 720
+  # 容差：实际客户区与配置相差在此范围内仍允许运行
+  tolerance: 16
+
+paths:
+  assets: assets
+  tasks: tasks
+
+anchors:
+  # 示例锚点：请用 ocr4game-annotate 在 1280×720 窗口下截取真实 UI
+  # 合成回归测试见 tests/fixtures/star_rail/manifest.yaml
+
+  main_menu_marker:
+    type: template
+    image: ui/main_menu_marker.png
+    threshold: 0.85
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
+    roi: [0.0, 0.0, 1.0, 0.12]
+
+  guide_entrance:
+    type: template
+    image: ui/guide_entrance.png
+    threshold: 0.85
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
+    roi: [0.0, 0.0, 0.15, 0.25]
+
+  daily_panel_marker:
+    type: template
+    image: ui/daily_panel_marker.png
+    threshold: 0.85
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
+    roi: [0.0, 0.0, 1.0, 0.15]
+
+  daily_text:
+    type: ocr
+    expect:
+      - 日常
+      - 每日
+      - 实训
+      - 活跃度
+    roi: [0.65, 0.05, 0.98, 0.22]
+    min_confidence: 0.5
+
+  claim_button:
+    type: template
+    image: ui/claim_button.png
+    threshold: 0.88
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
+    roi: [0.3, 0.5, 0.7, 0.95]
+
+  confirm_button:
+    type: template
+    image: ui/confirm_button.png
+    threshold: 0.88
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
+    roi: [0.35, 0.55, 0.65, 0.85]
+
+  sweep_button:
+    type: template
+    image: ui/sweep_button.png
+    threshold: 0.88
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
+    roi: [0.55, 0.6, 0.95, 0.95]
+
+  dialog_close:
+    type: template
+    image: ui/dialog_close.png
+    threshold: 0.85
+    scales: [0.95, 1.0, 1.05]
+    match_mode: gray
+    roi: [0.72, 0.08, 0.98, 0.32]
+
+screen_states:
+  main_screen:
+    description: game main screen
+    require:
+      - anchor_visible: main_menu_marker
+    optional:
+      - ocr_contains_any: ["开拓", "任务", "指南"]
+
+  reward_screen:
+    description: reward claim screen
+    require:
+      - anchor_visible: claim_button
+    optional:
+      - ocr_contains_any: ["领取", "奖励"]
+      - anchor_visible: dialog_close
+
+content_extractors:
+  daily_training:
+    when_state: reward_screen
+    fields:
+      title:
+        type: ocr_text
+        roi: [0.2, 0.1, 0.6, 0.2]
+        contains_any: ["每日实训", "每日训练"]
+      active_points:
+        type: ocr_number
+        roi: [0.7, 0.2, 0.95, 0.35]
+        regex: "\\d+"
+      reward_claimable:
+        type: anchor_visible
+        anchor: claim_button
+
+recovery:
+  # 卡住时尝试按 Esc 关闭弹窗（可按游戏习惯调整）
+  escape_key: escape
+  max_recovery_attempts: 2

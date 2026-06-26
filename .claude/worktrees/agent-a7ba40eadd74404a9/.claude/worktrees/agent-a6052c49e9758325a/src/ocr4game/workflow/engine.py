@@ -1,0 +1,140 @@
+"""YAML 工作流执行引擎。"""
+
+from __future__ import annotations
+
+import time
+from pathlib import Path
+from typing import Any
+
+from ocr4game.config import load_task_config
+from ocr4game.games.base import GamePlugin
+from ocr4game.workflow.actions import ActionExecutor, ActionRegistry, build_default_registry
+from ocr4game.workflow.context import RunContext
+from ocr4game.workflow.conditions import evaluate_condition
+from ocr4game.workflow.errors import RunTimeout, StepFailed
+from ocr4game.workflow.semantics import parse_step_runtime
+from ocr4game.workflow.vars import resolve_value
+
+
+class WorkflowEngine:
+    def __init__(
+        self,
+        ctx: RunContext,
+        *,
+        plugin: GamePlugin | None = None,
+        registry: ActionRegistry | None = None,
+    ) -> None:
+        self._ctx = ctx
+        self._default_timeout = ctx.global_cfg.workflow.default_step_timeout_ms
+        self._default_retry = ctx.global_cfg.workflow.default_max_retry
+        self._max_run_seconds = ctx.global_cfg.workflow.max_run_minutes * 60
+        self._run_started_at: float | None = None
+        self._registry = registry or build_default_registry(default_timeout_ms=self._default_timeout)
+        if plugin is not None:
+            plugin.register_actions(self._registry)
+        self._executor = ActionExecutor(ctx, self._registry)
+
+    def run_task(
+        self,
+        task_path: Path,
+        *,
+        var_overrides: dict[str, Any] | None = None,
+    ) -> None:
+        task = load_task_config(task_path)
+        self._ctx.vars.update(task.vars)
+        if var_overrides:
+            self._ctx.vars.update(var_overrides)
+
+        self._run_started_at = time.monotonic()
+        for block in task.steps:
+            self._check_run_timeout()
+            self._run_step_block(self._resolve(block.model_dump()))
+
+    def _check_run_timeout(self) -> None:
+        if self._run_started_at is None or self._max_run_seconds <= 0:
+            return
+        elapsed = time.monotonic() - self._run_started_at
+        if elapsed > self._max_run_seconds:
+            raise RunTimeout(max_minutes=self._ctx.global_cfg.workflow.max_run_minutes)
+
+    def _resolve(self, value: Any) -> Any:
+        return resolve_value(value, self._ctx.vars)
+
+    def _run_step_block(self, block: dict[str, Any]) -> None:
+        step_id = block.get("id", "anonymous")
+        when = block.get("when")
+        if when is not None and not evaluate_condition(when, self._ctx):
+            self._ctx.log.info("步骤跳过", step=step_id, reason="when=false")
+            return
+
+        runtime = parse_step_runtime(block, default_retry=self._default_retry)
+
+        if runtime.loop_max is not None:
+            for _ in range(runtime.loop_max):
+                self._check_run_timeout()
+                if not self._run_with_retry(step_id, runtime.actions, retry=runtime.retry):
+                    break
+            return
+
+        if runtime.repeat is not None:
+            for _ in range(runtime.repeat):
+                self._check_run_timeout()
+                if not self._run_with_retry(step_id, runtime.actions, retry=runtime.retry):
+                    break
+            return
+
+        self._run_with_retry(step_id, runtime.actions, retry=runtime.retry, allow_fail=True)
+
+    def _run_with_retry(
+        self,
+        step_id: str,
+        actions: list[dict[str, Any]],
+        *,
+        retry: int,
+        allow_fail: bool = False,
+    ) -> bool:
+        attempts = max(retry, 0) + 1
+        for attempt in range(attempts):
+            self._check_run_timeout()
+            try:
+                return self._run_actions(step_id, actions, allow_fail=allow_fail)
+            except StepFailed:
+                if attempt + 1 >= attempts:
+                    raise
+        return True
+
+    def _run_actions(
+        self,
+        step_id: str,
+        actions: list[dict[str, Any]],
+        *,
+        allow_fail: bool = False,
+    ) -> bool:
+        for action in actions:
+            self._check_run_timeout()
+            if self._execute_action_or_if(step_id, action, allow_fail=allow_fail) is False:
+                if allow_fail:
+                    continue
+                return False
+        return True
+
+    def _execute_action_or_if(
+        self,
+        step_id: str,
+        action: dict[str, Any],
+        *,
+        allow_fail: bool,
+    ) -> bool:
+        if isinstance(action, dict) and len(action) == 1 and "if" in action:
+            branch = action["if"]
+            if not isinstance(branch, dict):
+                raise StepFailed(step_id, f"无效 if 分支: {branch!r}")
+            when = branch.get("when")
+            if evaluate_condition(when, self._ctx):
+                nested = branch.get("do") or []
+                return self._run_actions(step_id, nested, allow_fail=allow_fail)
+            return True
+
+        if not self._executor.execute(step_id, action):
+            return False
+        return True

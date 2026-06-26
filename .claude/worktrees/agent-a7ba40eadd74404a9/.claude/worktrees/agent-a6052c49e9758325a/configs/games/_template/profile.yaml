@@ -1,0 +1,28 @@
+# 示例游戏 — 配置模板（需复制并改名）
+
+game_id: my_game
+display_name: 示例游戏
+
+window:
+  title_contains:
+    - Game Window Title
+
+resolution:
+  width: 1920
+  height: 1080
+  tolerance: 32
+
+paths:
+  assets: assets
+  tasks: tasks
+
+anchors:
+  example_button:
+    type: template
+    image: ui/example_button.png
+    threshold: 0.85
+    roi: [0.4, 0.4, 0.6, 0.6]
+
+recovery:
+  escape_key: escape
+  max_recovery_attempts: 2

@@ -114,7 +114,7 @@ ocr4game-annotate --game star_rail --name claim_button
 # … 按需截取 profile.yaml 里列出的各锚点
 ```
 
-操作：弹出窗口后 **拖拽框选** UI → `Enter` 确认 → 自动保存 PNG 并更新 `profile.yaml`。
+操作：弹出窗口后 **拖拽框选** UI → `Enter` 确认 → 自动保存 PNG 并更新 `profile.yaml`。如果游戏界面切错或 UI 变化，按 `R` 重新抓取当前游戏画面；按 `Esc` 取消退出。选区过小时不会保存，可直接重新拖拽。
 
 **方式 B — 导入已有截图**
 
