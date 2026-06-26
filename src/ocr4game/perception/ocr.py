@@ -14,6 +14,7 @@ class OcrHit:
     text: str
     confidence: float
     center: tuple[int, int]
+    bbox: tuple[int, int, int, int] | None = None
 
 
 class OcrEngine:
@@ -43,7 +44,18 @@ class OcrEngine:
             ys = [p[1] for p in box]
             cx = int(sum(xs) / len(xs)) + ox
             cy = int(sum(ys) / len(ys)) + oy
-            hits.append(OcrHit(text=str(text), confidence=float(conf), center=(cx, cy)))
+            x0 = int(min(xs)) + ox
+            y0 = int(min(ys)) + oy
+            x1 = int(max(xs)) + ox
+            y1 = int(max(ys)) + oy
+            hits.append(
+                OcrHit(
+                    text=str(text),
+                    confidence=float(conf),
+                    center=(cx, cy),
+                    bbox=(x0, y0, x1, y1),
+                )
+            )
         return hits
 
     def find_text(

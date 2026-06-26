@@ -15,6 +15,7 @@ from ocr4game.config import (
     load_task_config,
 )
 from ocr4game.games.base import GamePlugin
+from ocr4game.perception.screen_state import rule_anchor_refs
 from ocr4game.resources import game_assets_dir
 from ocr4game.workflow.actions.base import build_default_registry
 from ocr4game.workflow.conditions import validate_condition_syntax
@@ -54,6 +55,47 @@ def validate_game_profile(
                     )
                 )
 
+    issues.extend(_validate_content_profile(profile))
+
+    return issues
+
+
+def _validate_content_profile(profile: GameProfile) -> list[ValidationIssue]:
+    issues: list[ValidationIssue] = []
+    for state_name, state in profile.screen_states.items():
+        for group_name, rules in (
+            ("require", state.require),
+            ("optional", state.optional),
+            ("reject", state.reject),
+        ):
+            for index, rule in enumerate(rules):
+                for anchor_name in rule_anchor_refs(rule):
+                    if anchor_name not in profile.anchors:
+                        issues.append(
+                            ValidationIssue(
+                                "error",
+                                f"screen_state 引用未定义锚点: {anchor_name}",
+                                f"profile.screen_states.{state_name}.{group_name}[{index}]",
+                            )
+                        )
+    for extractor_name, extractor in profile.content_extractors.items():
+        if extractor.when_state and extractor.when_state not in profile.screen_states:
+            issues.append(
+                ValidationIssue(
+                    "error",
+                    f"content_extractor 引用未定义 screen_state: {extractor.when_state}",
+                    f"profile.content_extractors.{extractor_name}.when_state",
+                )
+            )
+        for field_name, field in extractor.fields.items():
+            if field.anchor and field.anchor not in profile.anchors:
+                issues.append(
+                    ValidationIssue(
+                        "error",
+                        f"content field 引用未定义锚点: {field.anchor}",
+                        f"profile.content_extractors.{extractor_name}.fields.{field_name}",
+                    )
+                )
     return issues
 
 

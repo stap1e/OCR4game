@@ -9,9 +9,15 @@ import structlog
 
 from ocr4game import __version__
 from ocr4game.config import load_game_profile, load_global_config
-from ocr4game.games.registry import discover_configured_games, get_plugin, get_plugin_spec, list_registered_games
+from ocr4game.games.registry import (
+    discover_configured_games,
+    get_plugin,
+    get_plugin_spec,
+    list_registered_games,
+)
 from ocr4game.resources import game_task_path
 from ocr4game.validation import format_issues, has_errors, validate_run
+from ocr4game.workflow.lint import lint_task_file
 from ocr4game.workflow.vars import InvalidVarAssignmentError, parse_var_assignment
 
 
@@ -134,6 +140,14 @@ def main(argv: list[str] | None = None) -> int:
             var_overrides=var_overrides or None,
             strict_assets=args.strict,
         )
+        if args.validate and args.strict:
+            issues = lint_task_file(
+                profile,
+                task_path,
+                plugin=plugin,
+                var_overrides=var_overrides or None,
+                include_validation=False,
+            ) + issues
         code = _report_validation(log, issues, strict=args.strict)
         if code != 0:
             return code
@@ -153,6 +167,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     from ocr4game.runtime.binding import bind_runtime
+    from ocr4game.runtime.trace import TraceLogger
     from ocr4game.workflow.context import RunContext
     from ocr4game.workflow.engine import WorkflowEngine
     from ocr4game.workflow.errors import RunTimeout, StepFailed
@@ -176,6 +191,8 @@ def main(argv: list[str] | None = None) -> int:
     if var_overrides:
         log.info("CLI 覆盖 vars", **var_overrides)
 
+    ctx.ensure_run_dir()
+    ctx.trace = TraceLogger(ctx.run_dir, profile.game_id, args.task, logger=log)
     engine = WorkflowEngine(ctx, plugin=plugin)
     try:
         engine.run_task(task_path, var_overrides=var_overrides or None)
@@ -190,6 +207,8 @@ def main(argv: list[str] | None = None) -> int:
             frame = ctx.grab_frame()
             plugin.on_step_failure(ctx, exc.step_id, frame)
         return 2
+    finally:
+        ctx.trace.close()
 
 
 if __name__ == "__main__":

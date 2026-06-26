@@ -8,9 +8,9 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_ROOT / "src"))
 
-import cv2
-import numpy as np
-import yaml
+import cv2  # noqa: E402
+import numpy as np  # noqa: E402
+import yaml  # noqa: E402
 
 FIXTURES = Path(__file__).resolve().parent / "star_rail"
 FRAMES = FIXTURES / "frames"

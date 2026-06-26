@@ -12,6 +12,7 @@ import structlog
 
 from ocr4game.config import GameProfile, GlobalConfig
 from ocr4game.resources import runs_base_dir
+from ocr4game.runtime.trace import NullTraceLogger
 
 if TYPE_CHECKING:
     from ocr4game.perception.fusion import Perception
@@ -31,6 +32,7 @@ class RunContext:
     vars: dict = field(default_factory=dict)
     run_dir: Path | None = None
     log: object = field(default_factory=structlog.get_logger)
+    trace: object = field(default_factory=NullTraceLogger)
 
     def ensure_run_dir(self) -> Path:
         if self.run_dir is not None:
@@ -47,6 +49,14 @@ class RunContext:
         out = self.ensure_run_dir() / f"fail_{step_id}.png"
         cv2.imwrite(str(out), frame)
         return out
+
+    def run_relative_path(self, path: Path) -> str:
+        if self.run_dir is None:
+            return str(path)
+        try:
+            return str(path.relative_to(self.run_dir))
+        except ValueError:
+            return str(path)
 
     def grab_frame(self) -> np.ndarray:
         assert self.capture is not None

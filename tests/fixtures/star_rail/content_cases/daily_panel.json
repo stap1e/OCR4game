@@ -1,0 +1,11 @@
+{
+  "image": "../frames/daily_panel.png",
+  "expected": {
+    "screen_state": "reward_screen",
+    "texts_contains": ["领取", "奖励"],
+    "anchors_visible": ["claim_button"],
+    "extracted": {
+      "daily_training.reward_claimable": true
+    }
+  }
+}

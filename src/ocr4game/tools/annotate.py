@@ -11,9 +11,9 @@ import yaml
 
 from ocr4game.config import GameProfile, load_game_profile, load_global_config, load_yaml
 from ocr4game.games.registry import get_plugin
+from ocr4game.platform.window import GameWindow
 from ocr4game.resources import game_assets_dir, game_profile_path
 from ocr4game.runtime.binding import bind_runtime
-from ocr4game.platform.window import GameWindow
 from ocr4game.workflow.context import RunContext
 
 # OpenCV 框选状态

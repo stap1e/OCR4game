@@ -62,7 +62,7 @@ def run_context(tmp_path: Path) -> RunContext:
 
 
 def _result(*, found: bool, kind: str = "template", center: tuple[int, int] = (10, 20), confidence: float = 0.9) -> SimpleNamespace:
-    return SimpleNamespace(found=found, kind=kind, center=center, confidence=confidence)
+    return SimpleNamespace(found=found, kind=kind, center=center, confidence=confidence, detail="")
 
 
 def test_click_template_optional_skip(run_context: RunContext) -> None:

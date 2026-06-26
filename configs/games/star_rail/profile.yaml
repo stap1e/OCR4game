@@ -104,6 +104,38 @@ anchors:
     match_mode: gray
     roi: [0.72, 0.08, 0.98, 0.32]
 
+screen_states:
+  main_screen:
+    description: game main screen
+    require:
+      - anchor_visible: main_menu_marker
+    optional:
+      - ocr_contains_any: ["开拓", "任务", "指南"]
+
+  reward_screen:
+    description: reward claim screen
+    require:
+      - anchor_visible: claim_button
+    optional:
+      - ocr_contains_any: ["领取", "奖励"]
+      - anchor_visible: dialog_close
+
+content_extractors:
+  daily_training:
+    when_state: reward_screen
+    fields:
+      title:
+        type: ocr_text
+        roi: [0.2, 0.1, 0.6, 0.2]
+        contains_any: ["每日实训", "每日训练"]
+      active_points:
+        type: ocr_number
+        roi: [0.7, 0.2, 0.95, 0.35]
+        regex: "\\d+"
+      reward_claimable:
+        type: anchor_visible
+        anchor: claim_button
+
 recovery:
   # 卡住时尝试按 Esc 关闭弹窗（可按游戏习惯调整）
   escape_key: escape

@@ -27,7 +27,12 @@ dev = ["pytest>=8.0", "ruff>=0.8"]
 ocr4game = "ocr4game.app:main"
 ocr4game-annotate = "ocr4game.tools.annotate:main"
 ocr4game-threshold = "ocr4game.tools.threshold_tune:main"
+ocr4game-anchor-eval = "ocr4game.tools.anchor_eval:main"
+ocr4game-lint = "ocr4game.tools.lint:main"
 ocr4game-import = "ocr4game.tools.import_screenshots:main"
+ocr4game-report = "ocr4game.tools.report:main"
+ocr4game-replay = "ocr4game.tools.replay:main"
+ocr4game-recognize = "ocr4game.tools.recognize:main"
 
 [project.entry-points."ocr4game.plugins"]
 star_rail = "ocr4game.games.star_rail.plugin:StarRailPlugin"

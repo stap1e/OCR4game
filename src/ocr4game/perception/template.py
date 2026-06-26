@@ -48,11 +48,11 @@ class TemplateMatcher:
             ox, oy = roi_offset(roi, frame.shape[:2])
 
         search_prepared = _prepare_image(search, match_mode)
-        template_prepared = _prepare_image(template, match_mode)
         best = MatchResult(False, 0.0, (0, 0), (0, 0))
 
         for scale in _normalized_scales(scales):
-            candidate = _resize_template(template_prepared, scale)
+            scaled_template = _resize_template(template, scale)
+            candidate = _prepare_image(scaled_template, match_mode)
             th, tw = candidate.shape[:2]
             sh, sw = search_prepared.shape[:2]
             if th > sh or tw > sw:

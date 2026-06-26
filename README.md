@@ -10,7 +10,8 @@
 - **OCR 识别**：基于 RapidOCR，用于文字锚点和界面状态判断。
 - **YAML 工作流**：用 `tasks/*.yaml` 描述点击、等待、条件分支、循环和变量覆盖。
 - **游戏插件机制**：通过 `entry_points` 注册新游戏插件，核心逻辑可复用。
-- **调试工具链**：提供模板框选、阈值标定、截图导入、离线校验、失败截图保存。
+- **调试工具链**：提供模板框选、阈值标定、anchor 离线评估、内容识别、workflow lint、截图导入、离线校验、失败截图保存。
+- **Game Content Recognition / Perception v2**：离线识别 screen state、可见 UI anchor、OCR 文本和结构化提取字段，并输出 JSON。
 - **回归测试 fixtures**：可用合成截图验证模板锚点是否仍可识别。
 
 ## 环境要求
@@ -218,6 +219,9 @@ ocr4game --log-level DEBUG --game star_rail --task daily
 | `ocr4game-annotate --game star_rail --list-windows --verbose` | 排查窗口绑定 |
 | `ocr4game-threshold --game star_rail --anchor claim_button --sweep` | 查看匹配置信度和阈值档位 |
 | `ocr4game-import --game star_rail --from-dir D:\captures\star_rail` | 批量导入模板和 frames |
+| `ocr4game-report --run runs/star_rail_xxx` | 根据 trace 生成 run 诊断报告 |
+| `ocr4game-replay --run runs/star_rail_xxx --anchor claim_button` | 离线用失败截图复查锚点识别 |
+| `ocr4game-recognize --game star_rail --image tests/fixtures/star_rail/frames/daily_panel.png --json` | 离线输出 screen/content JSON |
 
 完整参数与退出码见 [docs/CLI.md](docs/CLI.md)。
 
@@ -245,6 +249,8 @@ runs/                                 # 运行失败截图和日志产物（giti
 - `window`：窗口标题、排除项、进程名
 - `resolution`：期望客户区大小和容差
 - `anchors`：模板/OCR 锚点
+- `screen_states`：由 anchor/OCR 规则组合出的画面状态
+- `content_extractors`：按状态和 ROI 提取任务名、数字、按钮状态等结构化字段
 - `recovery`：失败恢复按键
 - `extensions`：插件或游戏自定义扩展配置
 
@@ -258,6 +264,46 @@ claim_button:
   scales: [0.95, 1.0, 1.05]
   match_mode: gray
   roi: [0.3, 0.5, 0.7, 0.95]
+```
+
+### Game Content Recognition
+
+`screen_states` 用 require/optional/reject 规则判断当前画面，例如：
+
+```yaml
+screen_states:
+  reward_screen:
+    require:
+      - anchor_visible: claim_button
+    optional:
+      - ocr_contains_any: ["领取", "奖励"]
+```
+
+`content_extractors` 可从固定 ROI 或 anchor 结果提取结构化内容：
+
+```yaml
+content_extractors:
+  daily_training:
+    when_state: reward_screen
+    fields:
+      active_points:
+        type: ocr_number
+        roi: [0.7, 0.2, 0.95, 0.35]
+      reward_claimable:
+        type: anchor_visible
+        anchor: claim_button
+```
+
+工作流 `when` 也可使用内容条件：`screen_state`、`ocr_contains`、`content_eq`、`content_gt` 等。
+
+离线识别示例：
+
+```powershell
+ocr4game-anchor-eval --game star_rail --include-ocr --screenshots tests/fixtures/star_rail/frames --output-dir runs/anchor_eval --html --overlay
+ocr4game-recognize --game star_rail --image tests/fixtures/star_rail/frames/daily_panel.png --json
+ocr4game-recognize --game star_rail --images tests/fixtures/star_rail/frames --output-dir runs/recognize_batch
+ocr4game-lint --game star_rail --task daily --strict
+python -m ocr4game.app --validate --strict --game star_rail --task daily
 ```
 
 ### 任务 YAML
@@ -325,6 +371,7 @@ my_game = "ocr4game.games.my_game.plugin:MyGamePlugin"
 | [docs/CLI.md](docs/CLI.md) | CLI 参数和退出码 |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md) | 工作流 YAML、vars、when/if |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | 常见问题排查 |
+| [docs/diagnostics.md](docs/diagnostics.md) | trace、报告生成和离线 replay |
 | [docs/ADDING_A_GAME.md](docs/ADDING_A_GAME.md) | 接入新游戏 |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 架构与扩展点 |
 | [configs/README.md](configs/README.md) | 配置字段参考 |

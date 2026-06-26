@@ -68,6 +68,35 @@ class OcrAnchorConfig(BaseModel):
     min_confidence: float = 0.5
 
 
+class ScreenStateConfig(BaseModel):
+    description: str = ""
+    require: list[dict[str, Any]] = Field(default_factory=list)
+    optional: list[dict[str, Any]] = Field(default_factory=list)
+    reject: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ContentFieldConfig(BaseModel):
+    type: Literal[
+        "ocr_text",
+        "ocr_number",
+        "ocr_regex",
+        "anchor_visible",
+        "anchor_score",
+        "screen_state",
+    ]
+    roi: RelativeRoi | None = None
+    anchor: str | None = None
+    regex: str | None = None
+    contains: str | None = None
+    contains_any: list[str] = Field(default_factory=list)
+    min_confidence: float = 0.5
+
+
+class ContentExtractorConfig(BaseModel):
+    when_state: str | None = None
+    fields: dict[str, ContentFieldConfig] = Field(default_factory=dict)
+
+
 AnchorConfig = TemplateAnchorConfig | OcrAnchorConfig
 
 
@@ -86,6 +115,8 @@ class GameProfile(BaseModel):
     resolution: ResolutionConfig = Field(default_factory=ResolutionConfig)
     paths: PathsConfig = Field(default_factory=PathsConfig)
     anchors: dict[str, AnchorConfig] = Field(default_factory=dict)
+    screen_states: dict[str, ScreenStateConfig] = Field(default_factory=dict)
+    content_extractors: dict[str, ContentExtractorConfig] = Field(default_factory=dict)
     recovery: RecoveryConfig = Field(default_factory=RecoveryConfig)
     extensions: dict[str, Any] = Field(default_factory=dict)
 
@@ -134,6 +165,8 @@ def load_yaml(path: Path) -> dict[str, Any]:
 __all__ = [
     "AnchorConfig",
     "CaptureConfig",
+    "ContentExtractorConfig",
+    "ContentFieldConfig",
     "GameProfile",
     "GlobalConfig",
     "InputConfig",
@@ -142,6 +175,7 @@ __all__ = [
     "RecoveryConfig",
     "RelativeRoi",
     "ResolutionConfig",
+    "ScreenStateConfig",
     "TaskConfig",
     "StepBlock",
     "TemplateAnchorConfig",
